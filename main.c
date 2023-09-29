@@ -79,6 +79,15 @@ void receive() {
     PaTime latency = deviceInfo->defaultLowInputLatency;
 
     decoder = quiet_portaudio_decoder_create(opt, device, latency, sample_rate);
+
+    /**
+     * 위에서 디코더를 만들었습니다.
+     * 디코더를 만든 순간부터 Pa는 비동기 입출력을 시작하고,
+     * 별도의 새 스레드는 Pa 콜백이 쌓은 샘플들을 디코더에게 넘겨 처리합니다.
+     * 디코더는 자신이 처리한 바이트들을 가지고 있을 것입니다.
+     * 우리는 메인 스레드에 있으면서 무한 루프 속에서 그 바이트들을 가져오면 됩니다.
+     */
+
     quiet_portaudio_decoder_set_blocking(decoder, 0, 0);
 
     size_t write_buffer_size = 16384;

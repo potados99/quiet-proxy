@@ -91,7 +91,8 @@ static void quiet_lwip_portaudio_process_audio(struct netif *netif) {
 // hw -> quiet: receive audio samples from user/hw and decode to frame
 void quiet_lwip_portaudio_recv_audio_packet(struct netif *netif) {
     portaudio_eth_driver *driver = (portaudio_eth_driver*)netif->state;
-    quiet_portaudio_decoder_consume(driver->decoder);
+     // quiet_portaudio_decoder_consume(driver->decoder); // need no more.
+
     bool frame_open = quiet_portaudio_decoder_frame_in_progress(driver->decoder);
     if (!frame_open) {
         if (driver->rx_wait_peer_frame < driver->rx_wait_peer_frame_thresh) {

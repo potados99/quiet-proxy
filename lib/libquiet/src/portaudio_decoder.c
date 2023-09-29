@@ -32,6 +32,11 @@ static unsigned int decoder_decref(portaudio_decoder *dec) {
     return refcnt;
 }
 
+/**
+ * Pa가 호출하는 콜백입니다.
+ * 샘플이 들어올 때마다 이 콜백이 호출됩니다.
+ * 호출되면 consume_ring에 샘플을 쌓습니다.
+ */
 static int decoder_callback(const void *input_buffer_v, void *output_buffer_v,
                             unsigned long frame_count, const PaStreamCallbackTimeInfo *time_info,
                             PaStreamCallbackFlags status_flags, void *decoder_v) {
@@ -75,6 +80,18 @@ static int decoder_callback(const void *input_buffer_v, void *output_buffer_v,
     return paContinue;
 }
 
+/**
+ * consume_ring에 쌓인 샘플들을 소비합니다.
+ * ring에 샘플이 왜 쌓였느냐? Pa가 자신이 넘겨받은 decoder_callback 콜백을 호출하기 때문입니다.
+ * 해당 콜백에서는 Pa가 긁어온 샘플들을 consume_ring에 쌓습니다.
+ *
+ * 사운드카드 스레드에서 consume_ring에다가 샘플을 잔뜩 쌓았을 것입니다.
+ * 잠시 ring을 lock한 다음 그것들을 pcm 버퍼에 옮겨담습니다.
+ * 그리고는 디코딩을 합니다.
+ *
+ * @param dec_void
+ * @return
+ */
 static void *consume(void *dec_void) {
     portaudio_decoder *dec = (portaudio_decoder *)dec_void;
     size_t pcm_buffer_len = 64;
@@ -103,6 +120,15 @@ static void *consume(void *dec_void) {
     return NULL;
 }
 
+/**
+ * 디코더를 초기화하고, 샘플이 오면 버퍼에 쌓고 해독하기 시작합니다.
+ *
+ * @param opt
+ * @param device
+ * @param latency
+ * @param sample_rate
+ * @return
+ */
 portaudio_decoder *quiet_portaudio_decoder_create(const decoder_options *opt, PaDeviceIndex device,
                                                   PaTime latency, double sample_rate) {
     const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(device);

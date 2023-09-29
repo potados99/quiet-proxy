@@ -109,9 +109,18 @@ int main(int argc, char **argv) {
     conf->decoder_sample_size = 1 << 10;
 
     memcpy(conf->hardware_addr, mac, 6);
-    quiet_lwip_portaudio_interface *interface =
-        quiet_lwip_portaudio_create(conf, htonl(ipaddr), htonl(netmask), htonl(gateway));
+    quiet_lwip_portaudio_interface *interface = quiet_lwip_portaudio_create(conf, htonl(ipaddr), htonl(netmask), htonl(gateway));
     free(conf);
+
+    /**
+     * 여기까지, interface를 만들면서 Pa 스트림을 시작하고 새 스레드에서의 consume 루프도 시작하였습니다.
+     * 아래에서 추가로 만드는 스레드는, 상술한 quiet이 물어와 가공해놓은 프레임들을 또 한번 물어가 소켓에 올려보내 주는 일을 합니다.
+     * 흐름을 정리하면 아래와 같습니다:
+     * 사운드카드 스레드에서는 Pa 샘플들이 consume_ring에 담기고
+     * consume 스레드에서는 consume_ring에 담긴 Pa 샘플들이 디코드되고,
+     * 오디오 스레드에서는 디코드된 샘플들이 소켓의 수신 버퍼에 들어갑니다.
+     * 그리고 메인 스레드에서는 소켓에 데이터가 들어오기만 하염없이 기다립니다.
+     */
 
     quiet_lwip_portaudio_audio_threads *audio_threads =
         quiet_lwip_portaudio_start_audio_threads(interface);
