@@ -28,7 +28,7 @@ int main() {
     Pa_Initialize();
     
     /* get a profile and set up encoder options, which controls Quiet's modem */
-    quiet_encoder_options *encodeOpt = quiet_encoder_profile_filename("C:/Users/Administrator/source/repos/quiet-practice/lib/libquiet/quiet-profiles.json", "audible");
+    quiet_encoder_options *encodeOpt = quiet_encoder_profile_filename("C:/Users/Administrator/source/repos/quiet-practice/lib/libquiet/quiet-profiles.json", "audible-fsk");
 
     /* get some default options about device and soundcard setup from PortAudio */
     PaDeviceIndex device = Pa_GetDefaultOutputDevice();

@@ -13,10 +13,6 @@ set(LIQUID_VERSION ${CMAKE_MATCH_1})
 
 message("-- Configuring for liquid-dsp ${LIQUID_VERSION}")
 
-if (CMAKE_CROSSCOMPILING AND NOT HOST_C_COMPILER)
-    message(FATAL_ERROR "Please, define HOST_C_COMPILER to the path of the host C compiler.")
-endif ()
-
 include(CheckCPUID)
 include(CheckIncludeFile)
 include(CheckLibraryExists)
@@ -25,8 +21,8 @@ include(CheckTypeSize)
 include(LiquidBuildSamples)
 include(FindPackageHandleStandardArgs)
 
-include_directories(.)
-include_directories(include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
@@ -36,6 +32,8 @@ option(LIQUID_BUILD_SHARED "Build shared library" OFF)
 option(LIQUID_BUILD_STATIC "Build static library" ON)
 option(LIQUID_BUILD_EXAMPLES "Build examples" ON)
 option(LIQUID_BUILD_SANDBOX "Build sandbox" ON)
+option(LIQUID_BUILD_TESTS "Build tests" ON)
+option(LIQUID_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(LIQUID_FORCE_X86_MMX "Force MMX (useful for cross-compiling)" OFF)
 option(LIQUID_FORCE_X86_SSE "Force SSE (useful for cross-compiling)" OFF)
 option(LIQUID_FORCE_X86_SSE2 "Force SSE2 (useful for cross-compiling)" OFF)
@@ -48,6 +46,11 @@ option(LIQUID_FORCE_PPC_ALTIVEC "Force AltiVec (useful for cross-compiling)" OFF
 option(LIQUID_FORCE_ARM_NEON "Force NEON (useful for cross-compiling)" OFF)
 option(LIQUID_FORCE_ARM64_NEON "Force AArch64 NEON (useful for cross-compiling)" OFF)
 option(LIQUID_CXX "Compile in C++ mode. Always on for Windows/MSVC." OFF)
+
+if (CMAKE_CROSSCOMPILING AND LIQUID_BUILD_TESTS AND NOT HOST_C_COMPILER)
+    message(FATAL_ERROR "Please, define HOST_C_COMPILER to the path of the host C compiler.")
+endif ()
+
 
 
 CHECK_INCLUDE_FILE(sys/resource.h HAVE_SYS_RESOURCE_H)
@@ -170,16 +173,16 @@ endif()
 #
 
 set(agc_SOURCES
-        src/agc/src/agc_crcf.c
-        src/agc/src/agc_rrrf.c
+    src/agc/src/agc_crcf.c
+    src/agc/src/agc_rrrf.c
     )
 
 set(agc_AUTOTESTS_SOURCES
-        src/agc/tests/agc_crcf_autotest.c
+    src/agc/tests/agc_crcf_autotest.c
     )
 
 set(agc_BENCHMARKS_SOURCES
-        src/agc/bench/agc_crcf_benchmark.c
+    src/agc/bench/agc_crcf_benchmark.c
     )
 
 #
@@ -187,15 +190,15 @@ set(agc_BENCHMARKS_SOURCES
 #
 
 set(audio_SOURCES
-        src/audio/src/cvsd.c
+    src/audio/src/cvsd.c
     )
 
 set(audio_AUTOTESTS_SOURCES
-        src/audio/tests/cvsd_autotest.c
+    src/audio/tests/cvsd_autotest.c
     )
 
 set(audio_BENCHMARKS_SOURCES
-        src/audio/bench/cvsd_benchmark.c
+    src/audio/bench/cvsd_benchmark.c
     )
 
 #
@@ -203,21 +206,21 @@ set(audio_BENCHMARKS_SOURCES
 #
 
 set(buffer_SOURCES
-        src/buffer/src/bufferf.c
-        src/buffer/src/buffercf.c
+    src/buffer/src/bufferf.c
+    src/buffer/src/buffercf.c
     )
 
 set(buffer_AUTOTESTS_SOURCES
-        src/buffer/tests/cbuffer_autotest.c
-        src/buffer/tests/wdelay_autotest.c
-        src/buffer/tests/window_autotest.c
+    src/buffer/tests/cbuffer_autotest.c
+    src/buffer/tests/wdelay_autotest.c
+    src/buffer/tests/window_autotest.c
     #src/buffer/tests/sbuffer_autotest.c
     )
 
 set(buffer_BENCHMARKS_SOURCES
-        src/buffer/bench/cbuffercf_benchmark.c
-        src/buffer/bench/window_push_benchmark.c
-        src/buffer/bench/window_read_benchmark.c
+    src/buffer/bench/cbuffercf_benchmark.c
+    src/buffer/bench/window_push_benchmark.c
+    src/buffer/bench/window_read_benchmark.c
     )
 
 #
@@ -225,7 +228,7 @@ set(buffer_BENCHMARKS_SOURCES
 #
 
 set(channel_SOURCES
-        src/channel/src/channel_cccf.c
+    src/channel/src/channel_cccf.c
     )
 
 set(channel_AUTOTESTS_SOURCES
@@ -239,50 +242,50 @@ set(channel_BENCHMARKS_SOURCES
 #
 
 set(dotprod_C_SOURCES
-        src/dotprod/src/dotprod_cccf.c
-        src/dotprod/src/dotprod_crcf.c
-        src/dotprod/src/dotprod_rrrf.c
-        src/dotprod/src/sumsq.c
+    src/dotprod/src/dotprod_cccf.c
+    src/dotprod/src/dotprod_crcf.c
+    src/dotprod/src/dotprod_rrrf.c
+    src/dotprod/src/sumsq.c
     )
 
 # PowerPC AltiVec
 set(dotprod_ALTIVEC_SOURCES
-        src/dotprod/src/dotprod_cccf.c
-        src/dotprod/src/dotprod_crcf.av.c
-        src/dotprod/src/dotprod_rrrf.av.c
-        src/dotprod/src/sumsq.c
+    src/dotprod/src/dotprod_cccf.c
+    src/dotprod/src/dotprod_crcf.av.c
+    src/dotprod/src/dotprod_rrrf.av.c
+    src/dotprod/src/sumsq.c
     )
 
 # Intel MMX/SSE/AVX
 set(dotprod_SSE_SOURCES
-        src/dotprod/src/dotprod_cccf.mmx.c
-        src/dotprod/src/dotprod_crcf.mmx.c
-        src/dotprod/src/dotprod_rrrf.mmx.c
-        src/dotprod/src/sumsq.mmx.c
+    src/dotprod/src/dotprod_cccf.mmx.c
+    src/dotprod/src/dotprod_crcf.mmx.c
+    src/dotprod/src/dotprod_rrrf.mmx.c
+    src/dotprod/src/sumsq.mmx.c
     )
 
 # ARM NEON
 set(dotprod_NEON_SOURCES
-        src/dotprod/src/dotprod_cccf.neon.c
-        src/dotprod/src/dotprod_crcf.neon.c
-        src/dotprod/src/dotprod_rrrf.neon.c
-        src/dotprod/src/sumsq.c
+    src/dotprod/src/dotprod_cccf.neon.c
+    src/dotprod/src/dotprod_crcf.neon.c
+    src/dotprod/src/dotprod_rrrf.neon.c
+    src/dotprod/src/sumsq.c
     )
 
 set(dotprod_AUTOTESTS_SOURCES
-        src/dotprod/tests/dotprod_rrrf_autotest.c
-        src/dotprod/tests/dotprod_crcf_autotest.c
-        src/dotprod/tests/dotprod_cccf_autotest.c
-        src/dotprod/tests/sumsqf_autotest.c
-        src/dotprod/tests/sumsqcf_autotest.c
+    src/dotprod/tests/dotprod_rrrf_autotest.c
+    src/dotprod/tests/dotprod_crcf_autotest.c
+    src/dotprod/tests/dotprod_cccf_autotest.c
+    src/dotprod/tests/sumsqf_autotest.c
+    src/dotprod/tests/sumsqcf_autotest.c
     )
 
 set(dotprod_BENCHMARKS_SOURCES
-        src/dotprod/bench/dotprod_cccf_benchmark.c
-        src/dotprod/bench/dotprod_crcf_benchmark.c
-        src/dotprod/bench/dotprod_rrrf_benchmark.c
-        src/dotprod/bench/sumsqf_benchmark.c
-        src/dotprod/bench/sumsqcf_benchmark.c
+    src/dotprod/bench/dotprod_cccf_benchmark.c
+    src/dotprod/bench/dotprod_crcf_benchmark.c
+    src/dotprod/bench/dotprod_rrrf_benchmark.c
+    src/dotprod/bench/sumsqf_benchmark.c
+    src/dotprod/bench/sumsqcf_benchmark.c
     )
 
 if (LIQUID_SIMDOVERRIDE)
@@ -307,67 +310,67 @@ endif ()
 #
 
 set(equalization_SOURCES
-        src/equalization/src/equalizer_cccf.c
-        src/equalization/src/equalizer_rrrf.c
+    src/equalization/src/equalizer_cccf.c
+    src/equalization/src/equalizer_rrrf.c
     )
 
 set(equalization_AUTOTESTS_SOURCES
-        src/equalization/tests/eqlms_cccf_autotest.c
-        src/equalization/tests/eqrls_rrrf_autotest.c
+    src/equalization/tests/eqlms_cccf_autotest.c
+    src/equalization/tests/eqrls_rrrf_autotest.c
     )
 
 set(equalization_BENCHMARKS_SOURCES
-        src/equalization/bench/eqlms_cccf_benchmark.c
-        src/equalization/bench/eqrls_cccf_benchmark.c
+    src/equalization/bench/eqlms_cccf_benchmark.c
+    src/equalization/bench/eqrls_cccf_benchmark.c
     )
 
 #
 # MODULE : fec - forward error-correction
 #
 set(fec_SOURCES
-        src/fec/src/crc.c
-        src/fec/src/fec.c
-        src/fec/src/fec_conv.c
-        src/fec/src/fec_conv_poly.c
-        src/fec/src/fec_conv_pmatrix.c
-        src/fec/src/fec_conv_punctured.c
-        src/fec/src/fec_golay2412.c
-        src/fec/src/fec_hamming74.c
-        src/fec/src/fec_hamming84.c
-        src/fec/src/fec_hamming128.c
-        src/fec/src/fec_hamming1511.c
-        src/fec/src/fec_hamming3126.c
-        src/fec/src/fec_hamming128_gentab.c
-        src/fec/src/fec_pass.c
-        src/fec/src/fec_rep3.c
-        src/fec/src/fec_rep5.c
-        src/fec/src/fec_rs.c
-        src/fec/src/fec_secded2216.c
-        src/fec/src/fec_secded3932.c
-        src/fec/src/fec_secded7264.c
-        src/fec/src/interleaver.c
-        src/fec/src/packetizer.c
-        src/fec/src/sumproduct.c
+    src/fec/src/crc.c
+    src/fec/src/fec.c
+    src/fec/src/fec_conv.c
+    src/fec/src/fec_conv_poly.c
+    src/fec/src/fec_conv_pmatrix.c
+    src/fec/src/fec_conv_punctured.c
+    src/fec/src/fec_golay2412.c
+    src/fec/src/fec_hamming74.c
+    src/fec/src/fec_hamming84.c
+    src/fec/src/fec_hamming128.c
+    src/fec/src/fec_hamming1511.c
+    src/fec/src/fec_hamming3126.c
+    src/fec/src/fec_hamming128_gentab.c
+    src/fec/src/fec_pass.c
+    src/fec/src/fec_rep3.c
+    src/fec/src/fec_rep5.c
+    src/fec/src/fec_rs.c
+    src/fec/src/fec_secded2216.c
+    src/fec/src/fec_secded3932.c
+    src/fec/src/fec_secded7264.c
+    src/fec/src/interleaver.c
+    src/fec/src/packetizer.c
+    src/fec/src/sumproduct.c
     )
 
 set(fec_AUTOTESTS_SOURCES
-        src/fec/tests/crc_autotest.c
-        src/fec/tests/fec_autotest.c
-        src/fec/tests/fec_soft_autotest.c
-        src/fec/tests/fec_golay2412_autotest.c
-        src/fec/tests/fec_hamming74_autotest.c
-        src/fec/tests/fec_hamming84_autotest.c
-        src/fec/tests/fec_hamming128_autotest.c
-        src/fec/tests/fec_hamming1511_autotest.c
-        src/fec/tests/fec_hamming3126_autotest.c
-        src/fec/tests/fec_reedsolomon_autotest.c
-        src/fec/tests/fec_rep3_autotest.c
-        src/fec/tests/fec_rep5_autotest.c
-        src/fec/tests/fec_secded2216_autotest.c
-        src/fec/tests/fec_secded3932_autotest.c
-        src/fec/tests/fec_secded7264_autotest.c
-        src/fec/tests/interleaver_autotest.c
-        src/fec/tests/packetizer_autotest.c
+    src/fec/tests/crc_autotest.c
+    src/fec/tests/fec_autotest.c
+    src/fec/tests/fec_soft_autotest.c
+    src/fec/tests/fec_golay2412_autotest.c
+    src/fec/tests/fec_hamming74_autotest.c
+    src/fec/tests/fec_hamming84_autotest.c
+    src/fec/tests/fec_hamming128_autotest.c
+    src/fec/tests/fec_hamming1511_autotest.c
+    src/fec/tests/fec_hamming3126_autotest.c
+    src/fec/tests/fec_reedsolomon_autotest.c
+    src/fec/tests/fec_rep3_autotest.c
+    src/fec/tests/fec_rep5_autotest.c
+    src/fec/tests/fec_secded2216_autotest.c
+    src/fec/tests/fec_secded3932_autotest.c
+    src/fec/tests/fec_secded7264_autotest.c
+    src/fec/tests/interleaver_autotest.c
+    src/fec/tests/packetizer_autotest.c
     )
 
 set(fec_BENCHMARKS_SOURCES
@@ -384,70 +387,70 @@ set(fec_BENCHMARKS_SOURCES
 # MODULE : fft - fast Fourier transforms, discrete sine/cosine transforms, etc.
 #
 set(fft_SOURCES
-        src/fft/src/fftf.c
-        src/fft/src/spgramcf.c
-        src/fft/src/spgramf.c
-        src/fft/src/fft_utilities.c
+    src/fft/src/fftf.c
+    src/fft/src/spgramcf.c
+    src/fft/src/spgramf.c
+    src/fft/src/fft_utilities.c
     )
 
 set(fft_AUTOTESTS_SOURCES
-        src/fft/tests/fft_small_autotest.c
-        src/fft/tests/fft_radix2_autotest.c
-        src/fft/tests/fft_composite_autotest.c
-        src/fft/tests/fft_prime_autotest.c
-        src/fft/tests/fft_r2r_autotest.c
-        src/fft/tests/fft_shift_autotest.c
+    src/fft/tests/fft_small_autotest.c
+    src/fft/tests/fft_radix2_autotest.c
+    src/fft/tests/fft_composite_autotest.c
+    src/fft/tests/fft_prime_autotest.c
+    src/fft/tests/fft_r2r_autotest.c
+    src/fft/tests/fft_shift_autotest.c
     )
 
 set(autotest_EXTRA_SOURCES ${autotest_EXTRA_SOURCES}
-        src/fft/tests/fft_runtest.c
-        src/fft/tests/data/fft_data_2.c
-        src/fft/tests/data/fft_data_3.c
-        src/fft/tests/data/fft_data_4.c
-        src/fft/tests/data/fft_data_5.c
-        src/fft/tests/data/fft_data_6.c
-        src/fft/tests/data/fft_data_7.c
-        src/fft/tests/data/fft_data_8.c
-        src/fft/tests/data/fft_data_9.c
-        src/fft/tests/data/fft_data_10.c
-        src/fft/tests/data/fft_data_16.c
-        src/fft/tests/data/fft_data_17.c
-        src/fft/tests/data/fft_data_20.c
-        src/fft/tests/data/fft_data_21.c
-        src/fft/tests/data/fft_data_22.c
-        src/fft/tests/data/fft_data_24.c
-        src/fft/tests/data/fft_data_26.c
-        src/fft/tests/data/fft_data_30.c
-        src/fft/tests/data/fft_data_32.c
-        src/fft/tests/data/fft_data_35.c
-        src/fft/tests/data/fft_data_36.c
-        src/fft/tests/data/fft_data_43.c
-        src/fft/tests/data/fft_data_48.c
-        src/fft/tests/data/fft_data_63.c
-        src/fft/tests/data/fft_data_64.c
-        src/fft/tests/data/fft_data_79.c
-        src/fft/tests/data/fft_data_92.c
-        src/fft/tests/data/fft_data_96.c
-        src/fft/tests/data/fft_data_120.c
-        src/fft/tests/data/fft_data_130.c
-        src/fft/tests/data/fft_data_157.c
-        src/fft/tests/data/fft_data_192.c
-        src/fft/tests/data/fft_data_317.c
-        src/fft/tests/data/fft_data_509.c
-        src/fft/tests/data/fft_r2rdata_8.c
-        src/fft/tests/data/fft_r2rdata_27.c
-        src/fft/tests/data/fft_r2rdata_32.c
+    src/fft/tests/fft_runtest.c
+    src/fft/tests/data/fft_data_2.c
+    src/fft/tests/data/fft_data_3.c
+    src/fft/tests/data/fft_data_4.c
+    src/fft/tests/data/fft_data_5.c
+    src/fft/tests/data/fft_data_6.c
+    src/fft/tests/data/fft_data_7.c
+    src/fft/tests/data/fft_data_8.c
+    src/fft/tests/data/fft_data_9.c
+    src/fft/tests/data/fft_data_10.c
+    src/fft/tests/data/fft_data_16.c
+    src/fft/tests/data/fft_data_17.c
+    src/fft/tests/data/fft_data_20.c
+    src/fft/tests/data/fft_data_21.c
+    src/fft/tests/data/fft_data_22.c
+    src/fft/tests/data/fft_data_24.c
+    src/fft/tests/data/fft_data_26.c
+    src/fft/tests/data/fft_data_30.c
+    src/fft/tests/data/fft_data_32.c
+    src/fft/tests/data/fft_data_35.c
+    src/fft/tests/data/fft_data_36.c
+    src/fft/tests/data/fft_data_43.c
+    src/fft/tests/data/fft_data_48.c
+    src/fft/tests/data/fft_data_63.c
+    src/fft/tests/data/fft_data_64.c
+    src/fft/tests/data/fft_data_79.c
+    src/fft/tests/data/fft_data_92.c
+    src/fft/tests/data/fft_data_96.c
+    src/fft/tests/data/fft_data_120.c
+    src/fft/tests/data/fft_data_130.c
+    src/fft/tests/data/fft_data_157.c
+    src/fft/tests/data/fft_data_192.c
+    src/fft/tests/data/fft_data_317.c
+    src/fft/tests/data/fft_data_509.c
+    src/fft/tests/data/fft_r2rdata_8.c
+    src/fft/tests/data/fft_r2rdata_27.c
+    src/fft/tests/data/fft_r2rdata_32.c
     )
 
 set(fft_BENCHMARKS_SOURCES
-        src/fft/bench/fft_composite_benchmark.c
-        src/fft/bench/fft_prime_benchmark.c
-        src/fft/bench/fft_radix2_benchmark.c
-        src/fft/bench/fft_r2r_benchmark.c
+    src/fft/bench/fft_composite_benchmark.c
+    src/fft/bench/fft_prime_benchmark.c
+    src/fft/bench/fft_radix2_benchmark.c
+    src/fft/bench/fft_r2r_benchmark.c
     )
 
 set(benchmark_EXTRA_SOURCES ${benchmark_EXTRA_SOURCES}
-        src/fft/bench/fft_runbench.c
+    src/fft/bench/fft_runbench.c
     )
 
 #
@@ -501,332 +504,334 @@ set(filter_AUTOTESTS_SOURCES
 set(autotest_EXTRA_SOURCES ${autotest_EXTRA_SOURCES}
         src/filter/tests/fftfilt_runtest.c
 
-        src/filter/tests/data/fftfilt_rrrf_data_h4x256.c
-        src/filter/tests/data/fftfilt_crcf_data_h4x256.c
-        src/filter/tests/data/fftfilt_cccf_data_h4x256.c
+    src/filter/tests/data/fftfilt_rrrf_data_h4x256.c
+    src/filter/tests/data/fftfilt_crcf_data_h4x256.c
+    src/filter/tests/data/fftfilt_cccf_data_h4x256.c
 
-        src/filter/tests/data/fftfilt_rrrf_data_h7x256.c
-        src/filter/tests/data/fftfilt_crcf_data_h7x256.c
-        src/filter/tests/data/fftfilt_cccf_data_h7x256.c
+    src/filter/tests/data/fftfilt_rrrf_data_h7x256.c
+    src/filter/tests/data/fftfilt_crcf_data_h7x256.c
+    src/filter/tests/data/fftfilt_cccf_data_h7x256.c
 
-        src/filter/tests/data/fftfilt_rrrf_data_h13x256.c
-        src/filter/tests/data/fftfilt_crcf_data_h13x256.c
-        src/filter/tests/data/fftfilt_cccf_data_h13x256.c
+    src/filter/tests/data/fftfilt_rrrf_data_h13x256.c
+    src/filter/tests/data/fftfilt_crcf_data_h13x256.c
+    src/filter/tests/data/fftfilt_cccf_data_h13x256.c
 
-        src/filter/tests/data/fftfilt_rrrf_data_h23x256.c
-        src/filter/tests/data/fftfilt_crcf_data_h23x256.c
-        src/filter/tests/data/fftfilt_cccf_data_h23x256.c
+    src/filter/tests/data/fftfilt_rrrf_data_h23x256.c
+    src/filter/tests/data/fftfilt_crcf_data_h23x256.c
+    src/filter/tests/data/fftfilt_cccf_data_h23x256.c
 
-        src/filter/tests/firdecim_runtest.c
+    src/filter/tests/firdecim_runtest.c
 
-        src/filter/tests/data/firdecim_rrrf_data_M2h4x20.c
-        src/filter/tests/data/firdecim_crcf_data_M2h4x20.c
-        src/filter/tests/data/firdecim_cccf_data_M2h4x20.c
+    src/filter/tests/data/firdecim_rrrf_data_M2h4x20.c
+    src/filter/tests/data/firdecim_crcf_data_M2h4x20.c
+    src/filter/tests/data/firdecim_cccf_data_M2h4x20.c
 
-        src/filter/tests/data/firdecim_rrrf_data_M3h7x30.c
-        src/filter/tests/data/firdecim_crcf_data_M3h7x30.c
-        src/filter/tests/data/firdecim_cccf_data_M3h7x30.c
+    src/filter/tests/data/firdecim_rrrf_data_M3h7x30.c
+    src/filter/tests/data/firdecim_crcf_data_M3h7x30.c
+    src/filter/tests/data/firdecim_cccf_data_M3h7x30.c
 
-        src/filter/tests/data/firdecim_rrrf_data_M4h13x40.c
-        src/filter/tests/data/firdecim_crcf_data_M4h13x40.c
-        src/filter/tests/data/firdecim_cccf_data_M4h13x40.c
+    src/filter/tests/data/firdecim_rrrf_data_M4h13x40.c
+    src/filter/tests/data/firdecim_crcf_data_M4h13x40.c
+    src/filter/tests/data/firdecim_cccf_data_M4h13x40.c
 
-        src/filter/tests/data/firdecim_rrrf_data_M5h23x50.c
-        src/filter/tests/data/firdecim_crcf_data_M5h23x50.c
-        src/filter/tests/data/firdecim_cccf_data_M5h23x50.c
+    src/filter/tests/data/firdecim_rrrf_data_M5h23x50.c
+    src/filter/tests/data/firdecim_crcf_data_M5h23x50.c
+    src/filter/tests/data/firdecim_cccf_data_M5h23x50.c
 
-        src/filter/tests/firfilt_runtest.c
+    src/filter/tests/firfilt_runtest.c
 
-        src/filter/tests/data/firfilt_rrrf_data_h4x8.c
-        src/filter/tests/data/firfilt_crcf_data_h4x8.c
-        src/filter/tests/data/firfilt_cccf_data_h4x8.c
+    src/filter/tests/data/firfilt_rrrf_data_h4x8.c
+    src/filter/tests/data/firfilt_crcf_data_h4x8.c
+    src/filter/tests/data/firfilt_cccf_data_h4x8.c
 
-        src/filter/tests/data/firfilt_rrrf_data_h7x16.c
-        src/filter/tests/data/firfilt_crcf_data_h7x16.c
-        src/filter/tests/data/firfilt_cccf_data_h7x16.c
+    src/filter/tests/data/firfilt_rrrf_data_h7x16.c
+    src/filter/tests/data/firfilt_crcf_data_h7x16.c
+    src/filter/tests/data/firfilt_cccf_data_h7x16.c
 
-        src/filter/tests/data/firfilt_rrrf_data_h13x32.c
-        src/filter/tests/data/firfilt_crcf_data_h13x32.c
-        src/filter/tests/data/firfilt_cccf_data_h13x32.c
+    src/filter/tests/data/firfilt_rrrf_data_h13x32.c
+    src/filter/tests/data/firfilt_crcf_data_h13x32.c
+    src/filter/tests/data/firfilt_cccf_data_h13x32.c
 
-        src/filter/tests/data/firfilt_rrrf_data_h23x64.c
-        src/filter/tests/data/firfilt_crcf_data_h23x64.c
-        src/filter/tests/data/firfilt_cccf_data_h23x64.c
+    src/filter/tests/data/firfilt_rrrf_data_h23x64.c
+    src/filter/tests/data/firfilt_crcf_data_h23x64.c
+    src/filter/tests/data/firfilt_cccf_data_h23x64.c
 
-        src/filter/tests/iirfilt_runtest.c
+    src/filter/tests/iirfilt_runtest.c
 
-        src/filter/tests/data/iirfilt_rrrf_data_h3x64.c
-        src/filter/tests/data/iirfilt_crcf_data_h3x64.c
-        src/filter/tests/data/iirfilt_cccf_data_h3x64.c
+    src/filter/tests/data/iirfilt_rrrf_data_h3x64.c
+    src/filter/tests/data/iirfilt_crcf_data_h3x64.c
+    src/filter/tests/data/iirfilt_cccf_data_h3x64.c
 
-        src/filter/tests/data/iirfilt_rrrf_data_h5x64.c
-        src/filter/tests/data/iirfilt_crcf_data_h5x64.c
-        src/filter/tests/data/iirfilt_cccf_data_h5x64.c
+    src/filter/tests/data/iirfilt_rrrf_data_h5x64.c
+    src/filter/tests/data/iirfilt_crcf_data_h5x64.c
+    src/filter/tests/data/iirfilt_cccf_data_h5x64.c
 
-        src/filter/tests/data/iirfilt_rrrf_data_h7x64.c
-        src/filter/tests/data/iirfilt_crcf_data_h7x64.c
-        src/filter/tests/data/iirfilt_cccf_data_h7x64.c
+    src/filter/tests/data/iirfilt_rrrf_data_h7x64.c
+    src/filter/tests/data/iirfilt_crcf_data_h7x64.c
+    src/filter/tests/data/iirfilt_cccf_data_h7x64.c
     )
 
 set(filter_BENCHMARKS_SOURCES
-        src/filter/bench/fftfilt_crcf_benchmark.c
-        src/filter/bench/firdecim_crcf_benchmark.c
-        src/filter/bench/firhilb_benchmark.c
-        src/filter/bench/firinterp_crcf_benchmark.c
-        src/filter/bench/firfilt_crcf_benchmark.c
-        src/filter/bench/iirdecim_crcf_benchmark.c
-        src/filter/bench/iirfilt_crcf_benchmark.c
-        src/filter/bench/iirinterp_crcf_benchmark.c
-        src/filter/bench/resamp_crcf_benchmark.c
-        src/filter/bench/resamp2_crcf_benchmark.c
-        src/filter/bench/symsync_crcf_benchmark.c
+    src/filter/bench/fftfilt_crcf_benchmark.c
+    src/filter/bench/firdecim_crcf_benchmark.c
+    src/filter/bench/firhilb_benchmark.c
+    src/filter/bench/firinterp_crcf_benchmark.c
+    src/filter/bench/firfilt_crcf_benchmark.c
+    src/filter/bench/iirdecim_crcf_benchmark.c
+    src/filter/bench/iirfilt_crcf_benchmark.c
+    src/filter/bench/iirinterp_crcf_benchmark.c
+    src/filter/bench/resamp_crcf_benchmark.c
+    src/filter/bench/resamp2_crcf_benchmark.c
+    src/filter/bench/symsync_crcf_benchmark.c
     )
 
 #
 # MODULE : framing
 #
 set(framing_SOURCES
-        src/framing/src/bpacketgen.c
-        src/framing/src/bpacketsync.c
-        src/framing/src/bpresync_cccf.c
-        src/framing/src/bsync_rrrf.c
-        src/framing/src/bsync_crcf.c
-        src/framing/src/bsync_cccf.c
-        src/framing/src/detector_cccf.c
-        src/framing/src/dsssframegen.c
-        src/framing/src/dsssframesync.c
-        src/framing/src/framedatastats.c
-        src/framing/src/framesyncstats.c
-        src/framing/src/framegen64.c
-        src/framing/src/framesync64.c
-        src/framing/src/flexframegen.c
-        src/framing/src/flexframesync.c
-        src/framing/src/gmskframegen.c
-        src/framing/src/gmskframesync.c
-        src/framing/src/msourcecf.c
-        src/framing/src/ofdmflexframegen.c
-        src/framing/src/ofdmflexframesync.c
-        src/framing/src/presync_cccf.c
-        src/framing/src/symstreamcf.c
-        src/framing/src/symtrack_cccf.c
-        src/framing/src/qdetector_cccf.c
-        src/framing/src/qpacketmodem.c
-        src/framing/src/qpilotgen.c
-        src/framing/src/qpilotsync.c
+    src/framing/src/bpacketgen.c
+    src/framing/src/bpacketsync.c
+    src/framing/src/bpresync_cccf.c
+    src/framing/src/bsync_rrrf.c
+    src/framing/src/bsync_crcf.c
+    src/framing/src/bsync_cccf.c
+    src/framing/src/detector_cccf.c
+    src/framing/src/dsssframegen.c
+    src/framing/src/dsssframesync.c
+    src/framing/src/framedatastats.c
+    src/framing/src/framesyncstats.c
+    src/framing/src/framegen64.c
+    src/framing/src/framesync64.c
+    src/framing/src/flexframegen.c
+    src/framing/src/flexframesync.c
+    src/framing/src/fskframegen.c
+    src/framing/src/fskframesync.c
+    src/framing/src/gmskframegen.c
+    src/framing/src/gmskframesync.c
+    src/framing/src/msourcecf.c
+    src/framing/src/ofdmflexframegen.c
+    src/framing/src/ofdmflexframesync.c
+    src/framing/src/presync_cccf.c
+    src/framing/src/symstreamcf.c
+    src/framing/src/symtrack_cccf.c
+    src/framing/src/qdetector_cccf.c
+    src/framing/src/qpacketmodem.c
+    src/framing/src/qpilotgen.c
+    src/framing/src/qpilotsync.c
     )
 
 set(framing_AUTOTESTS_SOURCES
-        src/framing/tests/bpacketsync_autotest.c
-        src/framing/tests/bsync_autotest.c
-        src/framing/tests/detector_autotest.c
-        src/framing/tests/flexframesync_autotest.c
-        src/framing/tests/framesync64_autotest.c
-        src/framing/tests/qdetector_cccf_autotest.c
-        src/framing/tests/qpacketmodem_autotest.c
-        src/framing/tests/qpilotsync_autotest.c
+    src/framing/tests/bpacketsync_autotest.c
+    src/framing/tests/bsync_autotest.c
+    src/framing/tests/detector_autotest.c
+    src/framing/tests/flexframesync_autotest.c
+    src/framing/tests/framesync64_autotest.c
+    src/framing/tests/qdetector_cccf_autotest.c
+    src/framing/tests/qpacketmodem_autotest.c
+    src/framing/tests/qpilotsync_autotest.c
     )
 
 set(framing_BENCHMARKS_SOURCES
-        src/framing/bench/presync_benchmark.c
-        src/framing/bench/bpacketsync_benchmark.c
-        src/framing/bench/bpresync_benchmark.c
-        src/framing/bench/bsync_benchmark.c
-        src/framing/bench/detector_benchmark.c
-        src/framing/bench/flexframesync_benchmark.c
-        src/framing/bench/framesync64_benchmark.c
-        src/framing/bench/gmskframesync_benchmark.c
+    src/framing/bench/presync_benchmark.c
+    src/framing/bench/bpacketsync_benchmark.c
+    src/framing/bench/bpresync_benchmark.c
+    src/framing/bench/bsync_benchmark.c
+    src/framing/bench/detector_benchmark.c
+    src/framing/bench/flexframesync_benchmark.c
+    src/framing/bench/framesync64_benchmark.c
+    src/framing/bench/gmskframesync_benchmark.c
     )
 
 #
 # MODULE : math
 #
 set(math_SOURCES
-        src/math/src/poly.c
-        src/math/src/polyc.c
-        src/math/src/polyf.c
-        src/math/src/polycf.c
-        src/math/src/math.c
-        src/math/src/math.bessel.c
-        src/math/src/math.gamma.c
-        src/math/src/math.complex.c
-        src/math/src/math.trig.c
-        src/math/src/modular_arithmetic.c
-        src/math/src/windows.c
+    src/math/src/poly.c
+    src/math/src/polyc.c
+    src/math/src/polyf.c
+    src/math/src/polycf.c
+    src/math/src/math.c
+    src/math/src/math.bessel.c
+    src/math/src/math.gamma.c
+    src/math/src/math.complex.c
+    src/math/src/math.trig.c
+    src/math/src/modular_arithmetic.c
+    src/math/src/windows.c
     )
 
 set(math_AUTOTESTS_SOURCES
-        src/math/tests/gcd_autotest.c
-        src/math/tests/kbd_autotest.c
-        src/math/tests/math_autotest.c
-        src/math/tests/math_bessel_autotest.c
-        src/math/tests/math_gamma_autotest.c
-        src/math/tests/math_complex_autotest.c
-        src/math/tests/polynomial_autotest.c
-        src/math/tests/prime_autotest.c
+    src/math/tests/gcd_autotest.c
+    src/math/tests/kbd_autotest.c
+    src/math/tests/math_autotest.c
+    src/math/tests/math_bessel_autotest.c
+    src/math/tests/math_gamma_autotest.c
+    src/math/tests/math_complex_autotest.c
+    src/math/tests/polynomial_autotest.c
+    src/math/tests/prime_autotest.c
     )
 
 set(math_BENCHMARKS_SOURCES
-        src/math/bench/polyfit_benchmark.c
+    src/math/bench/polyfit_benchmark.c
     )
 
 #
 # MODULE : matrix
 #
 set(matrix_SOURCES
-        src/matrix/src/matrix.c
-        src/matrix/src/matrixf.c
-        src/matrix/src/matrixc.c
-        src/matrix/src/matrixcf.c
-        src/matrix/src/smatrix.common.c
-        src/matrix/src/smatrixb.c
-        src/matrix/src/smatrixf.c
-        src/matrix/src/smatrixi.c
+    src/matrix/src/matrix.c
+    src/matrix/src/matrixf.c
+    src/matrix/src/matrixc.c
+    src/matrix/src/matrixcf.c
+    src/matrix/src/smatrix.common.c
+    src/matrix/src/smatrixb.c
+    src/matrix/src/smatrixf.c
+    src/matrix/src/smatrixi.c
     )
 
 set(matrix_AUTOTESTS_SOURCES
-        src/matrix/tests/matrixcf_autotest.c
-        src/matrix/tests/matrixf_autotest.c
-        src/matrix/tests/smatrixb_autotest.c
-        src/matrix/tests/smatrixf_autotest.c
-        src/matrix/tests/smatrixi_autotest.c
+    src/matrix/tests/matrixcf_autotest.c
+    src/matrix/tests/matrixf_autotest.c
+    src/matrix/tests/smatrixb_autotest.c
+    src/matrix/tests/smatrixf_autotest.c
+    src/matrix/tests/smatrixi_autotest.c
     )
 
 set(autotest_EXTRA_SOURCES ${autotest_EXTRA_SOURCES}
-        src/matrix/tests/data/matrixf_data_add.c
-        src/matrix/tests/data/matrixf_data_aug.c
-        src/matrix/tests/data/matrixf_data_cgsolve.c
-        src/matrix/tests/data/matrixf_data_chol.c
-        src/matrix/tests/data/matrixf_data_gramschmidt.c
-        src/matrix/tests/data/matrixf_data_inv.c
-        src/matrix/tests/data/matrixf_data_linsolve.c
-        src/matrix/tests/data/matrixf_data_ludecomp.c
-        src/matrix/tests/data/matrixf_data_mul.c
-        src/matrix/tests/data/matrixf_data_qrdecomp.c
-        src/matrix/tests/data/matrixf_data_transmul.c
+    src/matrix/tests/data/matrixf_data_add.c
+    src/matrix/tests/data/matrixf_data_aug.c
+    src/matrix/tests/data/matrixf_data_cgsolve.c
+    src/matrix/tests/data/matrixf_data_chol.c
+    src/matrix/tests/data/matrixf_data_gramschmidt.c
+    src/matrix/tests/data/matrixf_data_inv.c
+    src/matrix/tests/data/matrixf_data_linsolve.c
+    src/matrix/tests/data/matrixf_data_ludecomp.c
+    src/matrix/tests/data/matrixf_data_mul.c
+    src/matrix/tests/data/matrixf_data_qrdecomp.c
+    src/matrix/tests/data/matrixf_data_transmul.c
 
-        src/matrix/tests/data/matrixcf_data_add.c
-        src/matrix/tests/data/matrixcf_data_aug.c
-        src/matrix/tests/data/matrixcf_data_chol.c
-        src/matrix/tests/data/matrixcf_data_inv.c
-        src/matrix/tests/data/matrixcf_data_linsolve.c
-        src/matrix/tests/data/matrixcf_data_ludecomp.c
-        src/matrix/tests/data/matrixcf_data_mul.c
-        src/matrix/tests/data/matrixcf_data_qrdecomp.c
-        src/matrix/tests/data/matrixcf_data_transmul.c
+    src/matrix/tests/data/matrixcf_data_add.c
+    src/matrix/tests/data/matrixcf_data_aug.c
+    src/matrix/tests/data/matrixcf_data_chol.c
+    src/matrix/tests/data/matrixcf_data_inv.c
+    src/matrix/tests/data/matrixcf_data_linsolve.c
+    src/matrix/tests/data/matrixcf_data_ludecomp.c
+    src/matrix/tests/data/matrixcf_data_mul.c
+    src/matrix/tests/data/matrixcf_data_qrdecomp.c
+    src/matrix/tests/data/matrixcf_data_transmul.c
     )
 
 set(matrix_BENCHMARKS_SOURCES
-        src/matrix/bench/matrixf_inv_benchmark.c
-        src/matrix/bench/matrixf_linsolve_benchmark.c
-        src/matrix/bench/matrixf_mul_benchmark.c
-        src/matrix/bench/smatrixf_mul_benchmark.c
+    src/matrix/bench/matrixf_inv_benchmark.c
+    src/matrix/bench/matrixf_linsolve_benchmark.c
+    src/matrix/bench/matrixf_mul_benchmark.c
+    src/matrix/bench/smatrixf_mul_benchmark.c
     )
 
 #
 # MODULE : modem
 #
 set(modem_SOURCES
-        src/modem/src/ampmodem.c
-        src/modem/src/cpfskdem.c
-        src/modem/src/cpfskmod.c
-        src/modem/src/fskdem.c
-        src/modem/src/fskmod.c
-        src/modem/src/gmskdem.c
-        src/modem/src/gmskmod.c
-        src/modem/src/modemf.c
-        src/modem/src/modem_utilities.c
-        src/modem/src/modem_apsk_const.c
-        src/modem/src/modem_arb_const.c
+    src/modem/src/ampmodem.c
+    src/modem/src/cpfskdem.c
+    src/modem/src/cpfskmod.c
+    src/modem/src/fskdem.c
+    src/modem/src/fskmod.c
+    src/modem/src/gmskdem.c
+    src/modem/src/gmskmod.c
+    src/modem/src/modemf.c
+    src/modem/src/modem_utilities.c
+    src/modem/src/modem_apsk_const.c
+    src/modem/src/modem_arb_const.c
     )
 
 set(modem_AUTOTESTS_SOURCES
-        src/modem/tests/cpfskmodem_autotest.c
-        src/modem/tests/freqmodem_autotest.c
-        src/modem/tests/fskmodem_autotest.c
-        src/modem/tests/modem_autotest.c
-        src/modem/tests/modem_demodsoft_autotest.c
-        src/modem/tests/modem_demodstats_autotest.c
+    src/modem/tests/cpfskmodem_autotest.c
+    src/modem/tests/freqmodem_autotest.c
+    src/modem/tests/fskmodem_autotest.c
+    src/modem/tests/modem_autotest.c
+    src/modem/tests/modem_demodsoft_autotest.c
+    src/modem/tests/modem_demodstats_autotest.c
     )
 
 set(modem_BENCHMARKS_SOURCES
-        src/modem/bench/freqdem_benchmark.c
-        src/modem/bench/freqmod_benchmark.c
-        src/modem/bench/fskdem_benchmark.c
-        src/modem/bench/fskmod_benchmark.c
-        src/modem/bench/gmskmodem_benchmark.c
-        src/modem/bench/modem_modulate_benchmark.c
-        src/modem/bench/modem_demodulate_benchmark.c
-        src/modem/bench/modem_demodsoft_benchmark.c
+    src/modem/bench/freqdem_benchmark.c
+    src/modem/bench/freqmod_benchmark.c
+    src/modem/bench/fskdem_benchmark.c
+    src/modem/bench/fskmod_benchmark.c
+    src/modem/bench/gmskmodem_benchmark.c
+    src/modem/bench/modem_modulate_benchmark.c
+    src/modem/bench/modem_demodulate_benchmark.c
+    src/modem/bench/modem_demodsoft_benchmark.c
     )
 
 #
 # MODULE : multichannel
 #
 set(multichannel_SOURCES
-        src/multichannel/src/firpfbch_crcf.c
-        src/multichannel/src/firpfbch_cccf.c
-        src/multichannel/src/ofdmframe.common.c
-        src/multichannel/src/ofdmframegen.c
-        src/multichannel/src/ofdmframesync.c
+    src/multichannel/src/firpfbch_crcf.c
+    src/multichannel/src/firpfbch_cccf.c
+    src/multichannel/src/ofdmframe.common.c
+    src/multichannel/src/ofdmframegen.c
+    src/multichannel/src/ofdmframesync.c
     )
 
 set(multichannel_AUTOTESTS_SOURCES
-        src/multichannel/tests/firpfbch2_crcf_autotest.c
-        src/multichannel/tests/firpfbch_crcf_synthesizer_autotest.c
-        src/multichannel/tests/firpfbch_crcf_analyzer_autotest.c
-        src/multichannel/tests/ofdmframesync_autotest.c
+    src/multichannel/tests/firpfbch2_crcf_autotest.c
+    src/multichannel/tests/firpfbch_crcf_synthesizer_autotest.c
+    src/multichannel/tests/firpfbch_crcf_analyzer_autotest.c
+    src/multichannel/tests/ofdmframesync_autotest.c
     )
 
 set(multichannel_BENCHMARKS_SOURCES
-        src/multichannel/bench/firpfbch_crcf_benchmark.c
-        src/multichannel/bench/firpfbch2_crcf_benchmark.c
-        src/multichannel/bench/ofdmframesync_acquire_benchmark.c
-        src/multichannel/bench/ofdmframesync_rxsymbol_benchmark.c
+    src/multichannel/bench/firpfbch_crcf_benchmark.c
+    src/multichannel/bench/firpfbch2_crcf_benchmark.c
+    src/multichannel/bench/ofdmframesync_acquire_benchmark.c
+    src/multichannel/bench/ofdmframesync_rxsymbol_benchmark.c
     )
 
 #
 # MODULE : nco - numerically-controlled oscillator
 #
 set(nco_SOURCES
-        src/nco/src/nco_crcf.c
-        src/nco/src/nco.utilities.c
-        src/nco/src/synth_crcf.c
+    src/nco/src/nco_crcf.c
+    src/nco/src/nco.utilities.c
+    src/nco/src/synth_crcf.c
     )
 
 set(nco_AUTOTESTS_SOURCES
-        src/nco/tests/nco_crcf_frequency_autotest.c
-        src/nco/tests/nco_crcf_mix_autotest.c
-        src/nco/tests/nco_crcf_phase_autotest.c
-        src/nco/tests/nco_crcf_pll_autotest.c
-        src/nco/tests/unwrap_phase_autotest.c
+    src/nco/tests/nco_crcf_frequency_autotest.c
+    src/nco/tests/nco_crcf_mix_autotest.c
+    src/nco/tests/nco_crcf_phase_autotest.c
+    src/nco/tests/nco_crcf_pll_autotest.c
+    src/nco/tests/unwrap_phase_autotest.c
     )
 
 set(autotest_EXTRA_SOURCES ${autotest_EXTRA_SOURCES}
-        src/nco/tests/data/nco_sincos_fsqrt1_2.c
-        src/nco/tests/data/nco_sincos_fsqrt1_3.c
-        src/nco/tests/data/nco_sincos_fsqrt1_5.c
-        src/nco/tests/data/nco_sincos_fsqrt1_7.c
+    src/nco/tests/data/nco_sincos_fsqrt1_2.c
+    src/nco/tests/data/nco_sincos_fsqrt1_3.c
+    src/nco/tests/data/nco_sincos_fsqrt1_5.c
+    src/nco/tests/data/nco_sincos_fsqrt1_7.c
     )
 
 set(nco_BENCHMARKS_SOURCES
-        src/nco/bench/nco_benchmark.c
-        src/nco/bench/vco_benchmark.c
+    src/nco/bench/nco_benchmark.c
+    src/nco/bench/vco_benchmark.c
     )
 
 #
 # MODULE : optim - optimization
 #
 set(optim_SOURCES
-        src/optim/src/chromosome.c
-        src/optim/src/gasearch.c
-        src/optim/src/gradsearch.c
-        src/optim/src/optim.common.c
-        src/optim/src/qnsearch.c
-        src/optim/src/utilities.c
+    src/optim/src/chromosome.c
+    src/optim/src/gasearch.c
+    src/optim/src/gradsearch.c
+    src/optim/src/optim.common.c
+    src/optim/src/qnsearch.c
+    src/optim/src/utilities.c
     )
 
 set(optim_AUTOTESTS_SOURCES
-        src/optim/tests/gradsearch_autotest.c
+    src/optim/tests/gradsearch_autotest.c
     )
 
 set(optim_BENCHMARKS_SOURCES )
@@ -835,80 +840,80 @@ set(optim_BENCHMARKS_SOURCES )
 # MODULE : quantization
 #
 set(quantization_SOURCES
-        src/quantization/src/compand.c
-        src/quantization/src/quantizercf.c
-        src/quantization/src/quantizerf.c
-        src/quantization/src/quantizer.inline.c
+    src/quantization/src/compand.c
+    src/quantization/src/quantizercf.c
+    src/quantization/src/quantizerf.c
+    src/quantization/src/quantizer.inline.c
     )
 
 set(quantization_AUTOTESTS_SOURCES
-        src/quantization/tests/compand_autotest.c
-        src/quantization/tests/quantize_autotest.c
+    src/quantization/tests/compand_autotest.c
+    src/quantization/tests/quantize_autotest.c
     )
 
 set(quantization_BENCHMARKS_SOURCES
-        src/quantization/bench/quantizer_benchmark.c
-        src/quantization/bench/compander_benchmark.c
+    src/quantization/bench/quantizer_benchmark.c
+    src/quantization/bench/compander_benchmark.c
     )
 
 #
 # MODULE : random
 #
 set(random_SOURCES
-        src/random/src/rand.c
-        src/random/src/randn.c
-        src/random/src/randexp.c
-        src/random/src/randweib.c
-        src/random/src/randgamma.c
-        src/random/src/randnakm.c
-        src/random/src/randricek.c
-        src/random/src/scramble.c
+    src/random/src/rand.c
+    src/random/src/randn.c
+    src/random/src/randexp.c
+    src/random/src/randweib.c
+    src/random/src/randgamma.c
+    src/random/src/randnakm.c
+    src/random/src/randricek.c
+    src/random/src/scramble.c
     )
 
 set(random_AUTOTESTS_SOURCES
-        src/random/tests/scramble_autotest.c
+    src/random/tests/scramble_autotest.c
     #src/random/tests/random_autotest.c
     )
 
 set(random_BENCHMARKS_SOURCES
-        src/random/bench/random_benchmark.c
+    src/random/bench/random_benchmark.c
     )
 
 #
 # MODULE : sequence
 #
 set(sequence_SOURCES
-        src/sequence/src/bsequence.c
-        src/sequence/src/msequence.c
+    src/sequence/src/bsequence.c
+    src/sequence/src/msequence.c
     )
 
 set(sequence_AUTOTESTS_SOURCES
-        src/sequence/tests/bsequence_autotest.c
-        src/sequence/tests/complementary_codes_autotest.c
-        src/sequence/tests/msequence_autotest.c
+    src/sequence/tests/bsequence_autotest.c
+    src/sequence/tests/complementary_codes_autotest.c
+    src/sequence/tests/msequence_autotest.c
     )
 
 set(sequence_BENCHMARKS_SOURCES
-        src/sequence/bench/bsequence_benchmark.c
+    src/sequence/bench/bsequence_benchmark.c
     )
 
 #
 # MODULE : utility
 #
 set(utility_SOURCES
-        src/utility/src/bshift_array.c
-        src/utility/src/byte_utilities.c
-        src/utility/src/msb_index.c
-        src/utility/src/pack_bytes.c
-        src/utility/src/shift_array.c
-        src/utility/src/utility.c
+    src/utility/src/bshift_array.c
+    src/utility/src/byte_utilities.c
+    src/utility/src/msb_index.c
+    src/utility/src/pack_bytes.c
+    src/utility/src/shift_array.c
+    src/utility/src/utility.c
     )
 
 set(utility_AUTOTESTS_SOURCES
-        src/utility/tests/bshift_array_autotest.c
-        src/utility/tests/count_bits_autotest.c
-        src/utility/tests/pack_bytes_autotest.c
-        src/utility/tests/shift_array_autotest.c
+    src/utility/tests/bshift_array_autotest.c
+    src/utility/tests/count_bits_autotest.c
+    src/utility/tests/pack_bytes_autotest.c
+    src/utility/tests/shift_array_autotest.c
     )
 
 set(utility_BENCHMARKS_SOURCES )
@@ -917,14 +922,14 @@ set(utility_BENCHMARKS_SOURCES )
 # MODULE : vector
 #
 set(vector_SOURCES
-        src/vector/src/vectorf_add.port.c
-        src/vector/src/vectorf_norm.port.c
-        src/vector/src/vectorf_mul.port.c
-        src/vector/src/vectorf_trig.port.c
-        src/vector/src/vectorcf_add.port.c
-        src/vector/src/vectorcf_norm.port.c
-        src/vector/src/vectorcf_mul.port.c
-        src/vector/src/vectorcf_trig.port.c
+    src/vector/src/vectorf_add.port.c
+    src/vector/src/vectorf_norm.port.c
+    src/vector/src/vectorf_mul.port.c
+    src/vector/src/vectorf_trig.port.c
+    src/vector/src/vectorcf_add.port.c
+    src/vector/src/vectorcf_norm.port.c
+    src/vector/src/vectorcf_mul.port.c
+    src/vector/src/vectorcf_trig.port.c
     )
 
 set(vector_AUTOTESTS_SOURCES )
@@ -944,7 +949,7 @@ configure_file(config.h.cmake
 # Library
 #
 set(liquid_SOURCES
-        src/libliquid.c
+    src/libliquid.c
     ${agc_SOURCES}
     ${audio_SOURCES}
     ${buffer_SOURCES}
@@ -974,9 +979,6 @@ endif()
 if (NOT LIQUID_BUILD_SHARED AND NOT LIQUID_BUILD_STATIC)
     message(FATAL_ERROR "Please, define LIQUID_BUILD_SHARED and/or LIQUID_BUILD_STATIC.")
 endif ()
-
-set(HAVE_FEC_H 1)
-set(HAVE_LIBFEC 1)
 
 if (LIQUID_BUILD_SHARED)
     add_library(liquid-shared SHARED ${liquid_SOURCES})
@@ -1057,9 +1059,9 @@ set(autotest_ALL_SOURCES
     )
 
 set(autotest_SOURCES
-        autotest/autotest.c
-        autotest/autotestlib.c
-        autotest/null_autotest.c
+    autotest/autotest.c
+    autotest/autotestlib.c
+    autotest/null_autotest.c
     ${autotest_ALL_SOURCES}
     ${autotest_EXTRA_SOURCES}
     )
@@ -1068,26 +1070,28 @@ if (LIQUID_CXX)
     set_source_files_properties(${autotest_SOURCES} PROPERTIES LANGUAGE CXX)
 endif()
 
-add_custom_target(autotest_include
-                  COMMAND "$<TARGET_FILE:autoscript>" "${OS_PATH_SEP}" "autotest" ${autotest_ALL_SOURCES} > "${CMAKE_CURRENT_BINARY_DIR}/autotest_include.h"
-                  DEPENDS autoscript
-                  BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/autotest_include.h"
-                  WORKING_DIRECTORY "."
-                  )
+if (LIQUID_BUILD_TESTS)
+    add_custom_target(autotest_include
+                      COMMAND "$<TARGET_FILE:autoscript>" "${OS_PATH_SEP}" "autotest" ${autotest_ALL_SOURCES} > "${CMAKE_CURRENT_BINARY_DIR}/autotest_include.h"
+                      DEPENDS autoscript
+                      BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/autotest_include.h"
+                      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                      )
 
-add_executable(autotest EXCLUDE_FROM_ALL ${autotest_SOURCES})
-set_property(TARGET autotest PROPERTY COMPILE_FLAGS "${_EXTRA_C_FLAGS}")
-add_dependencies(autotest autotest_include)
-target_link_libraries(autotest ${LIQUID_LIBRARY})
-if (GETOPT_LIBRARY)
-    target_link_libraries(autotest ${GETOPT_LIBRARY})
-endif(GETOPT_LIBRARY)
+    add_executable(autotest EXCLUDE_FROM_ALL ${autotest_SOURCES})
+    set_property(TARGET autotest PROPERTY COMPILE_FLAGS "${_EXTRA_C_FLAGS}")
+    add_dependencies(autotest autotest_include)
+    target_link_libraries(autotest ${LIQUID_LIBRARY})
+    if (GETOPT_LIBRARY)
+        target_link_libraries(autotest ${GETOPT_LIBRARY})
+    endif(GETOPT_LIBRARY)
 
-add_custom_target(autotest_run
-                  COMMAND "$<TARGET_FILE:autotest>"
-                  DEPENDS autotest
-                  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-                  )
+    add_custom_target(autotest_run
+                      COMMAND "$<TARGET_FILE:autotest>"
+                      DEPENDS autotest
+                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+                      )
+endif ()
 
 #
 # Benchmark
@@ -1119,21 +1123,23 @@ if (HAVE_SYS_RESOURCE_H)
         )
 
     set(benchmark_SOURCES
-            bench/bench.c
+        bench/bench.c
         ${benchmark_ALL_SOURCES}
         ${benchmark_EXTRA_SOURCES}
         )
 
+if (LIQUID_BUILD_BENCHMARKS)
     add_custom_target(benchmark_include
                       COMMAND "$<TARGET_FILE:autoscript>" "${OS_PATH_SEP}" "benchmark" ${benchmark_ALL_SOURCES} > "${CMAKE_CURRENT_BINARY_DIR}/benchmark_include.h"
                       DEPENDS autoscript
                       BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/benchmark_include.h"
-                      WORKING_DIRECTORY "."
+                      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                       )
 
     add_executable(benchmark EXCLUDE_FROM_ALL ${benchmark_SOURCES})
     add_dependencies(benchmark benchmark_include)
     target_link_libraries(benchmark ${LIQUID_LIBRARY})
+endif()
 else ()
     message(WARNING "Benchmark suite cannot be compiled because sys/resource.h header hasn't been found.")
 endif ()
