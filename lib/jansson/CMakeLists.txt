@@ -42,7 +42,7 @@ set(JANSSON_VERSION "4.14.0")
 set(JANSSON_SOVERSION 4)
 
 # for CheckFunctionKeywords
-set(CMAKE_MODULE_PATH "cmake")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 include (CheckCSourceCompiles)
 include (CheckFunctionExists)
