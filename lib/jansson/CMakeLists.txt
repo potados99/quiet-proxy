@@ -42,6 +42,8 @@ set(JANSSON_VERSION "4.14.0")
 set(JANSSON_SOVERSION 4)
 
 # for CheckFunctionKeywords
+# 이 프로젝트는 메인 프로젝트의 서브디렉토리로 존재하므로,
+# 경로를 제대로 찾을 수 있도록 현재 디렉토리의 prefix를 붙여 줍니다.
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 include (CheckCSourceCompiles)
@@ -357,6 +359,16 @@ else()
    set_target_properties(jansson PROPERTIES
       POSITION_INDEPENDENT_CODE true)
 endif()
+
+# Jansson의 public include 파일들은
+# ${CMAKE_CURRENT_BINARY_DIR}/include 경로로 갑니다.
+# 여기에 위치한 헤더 파일들을 밖에서 target_link_libraries 하여 사용하려면
+# BUILD_INTERFACE로 해당 디렉토리를 include로 두어야 합니다.
+# 자세한 설명: https://stackoverflow.com/questions/25676277/cmake-target-include-directories-prints-an-error-when-i-try-to-add-the-source
+target_include_directories(jansson PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
 
 if (JANSSON_EXAMPLES)
 	add_executable(simple_parse "examples/simple_parse.c")
