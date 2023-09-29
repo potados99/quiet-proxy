@@ -34,7 +34,12 @@
 #define SYNTH_PLL_BANDWIDTH_DEFAULT (0.1)
 #define SYNTH_PLL_GAIN_DEFAULT (1000)
 
-#define LIQUID_DEBUG_SYNTH (0)
+#define LIQUID_DEBUG_SYNTH (1)
+
+#if LIQUID_DEBUG_SYNTH
+static unsigned int num_debugs = 0;
+static unsigned int num_creates = 0;
+#endif
 
 struct SYNTH(_s) {
     T            theta;   // phase
@@ -51,6 +56,10 @@ struct SYNTH(_s) {
     // phase-locked loop
     T alpha;
     T beta;
+
+#if LIQUID_DEBUG_SYNTH
+    unsigned int debug_create_index;
+#endif
 };
 
 SYNTH() SYNTH(_create)(const TC * _table, unsigned int _length)
@@ -60,6 +69,23 @@ SYNTH() SYNTH(_create)(const TC * _table, unsigned int _length)
     q->length = _length;
     q->tab    = (TC *)malloc(q->length * sizeof(TC));
     memcpy(q->tab, _table, q->length * sizeof(TC));
+
+#if LIQUID_DEBUG_SYNTH
+    q->debug_create_index = num_creates;
+    num_creates++;
+
+    char filename[64];
+    unsigned int i;
+    sprintf(filename,"synth_tab_%d.txt", q->debug_create_index);
+    FILE * fid = fopen(filename, "w");
+    fprintf(fid, "#\n#\n");
+    fprintf(fid, "# name: tab\n# type: complex matrix\n# rows: 1\n# columns: %u\n", q->length);
+    for (i=0; i < q->length; i++) {
+        fprintf(fid, " (%12.4e,%12.4e)", crealf(q->tab[i]), cimagf(q->tab[i]));
+    }
+    fprintf(fid, "\n\n");
+    fclose(fid);
+#endif
 
     // set default pll bandwidth
     SYNTH(_pll_set_bandwidth)(q, SYNTH_PLL_BANDWIDTH_DEFAULT);
@@ -264,10 +290,32 @@ void SYNTH(_despread_triple)(SYNTH() _q, TC * _x, TC * _early, TC * _punctual, T
     T sum_late     = 0;
 
     unsigned int i;
+
+#if LIQUID_DEBUG_SYNTH
+    char filename[64];
+    sprintf(filename,"synth_despread_%d.txt", num_debugs);
+    FILE * fid = fopen(filename, "w");
+    fprintf(fid, "#\n#\n");
+    fprintf(fid, "# name: tab\n# type: scalar\n%u\n\n", _q->debug_create_index);
+    fprintf(fid, "# name: theta\n# type: scalar\n%12.4e\n\n", _q->theta);
+    fprintf(fid, "# name: d_theta\n# type: scalar\n%12.4e\n\n", _q->d_theta);
+    fprintf(fid, "# name: index\n# type: scalar\n%u\n\n", _q->index);
+    fprintf(fid, "# name: x\n# type: complex matrix\n# rows: 1\n# columns: %u\n", _q->length);
+    for (i = 0; i < _q->length; i++) {
+        fprintf(fid, " (%12.4e,%12.4e)", crealf(_x[i]), cimagf(_x[i]));
+    }
+    fprintf(fid, "\n\n");
+    fprintf(fid, "# name: punctual\n# type: complex matrix\n# rows: 1\n# columns: %u\n", _q->length);
+#endif
+
     for (i = 0; i < _q->length; i++) {
         despread_early += _x[i] * conjf(_q->prev_half);
         despread_punctual += _x[i] * conjf(_q->current);
         despread_late += _x[i] * conjf(_q->next_half);
+
+#if LIQUID_DEBUG_SYNTH
+        fprintf(fid, " (%12.4e,%12.4e)", crealf(_q->current), cimagf(_q->current));
+#endif
 
         sum_early += cabsf(_x[i]) * cabsf(_q->prev_half);
         sum_punctual += cabsf(_x[i]) * cabsf(_q->current);
@@ -275,6 +323,12 @@ void SYNTH(_despread_triple)(SYNTH() _q, TC * _x, TC * _early, TC * _punctual, T
 
         SYNTH(_step)(_q);
     }
+
+#if LIQUID_DEBUG_SYNTH
+    fprintf(fid, "\n\n");
+    fclose(fid);
+    num_debugs++;
+#endif
 
     *_early    = despread_early / sum_early;
     *_punctual = despread_punctual / sum_punctual;

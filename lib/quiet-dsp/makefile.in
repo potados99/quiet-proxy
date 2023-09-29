@@ -66,8 +66,8 @@ RANLIB		:= @RANLIB@
 INCLUDE_CFLAGS	= $(addprefix -I,$(include_dirs))
 CONFIG_CFLAGS	= @CFLAGS@ @DEBUG_MSG_OPTION@ @ARCH_OPTION@
 CPPFLAGS	= @CPPFLAGS@ $(INCLUDE_CFLAGS)
-CFLAGS		= $(CONFIG_CFLAGS) -Wall -fPIC
-LDFLAGS		= @LDFLAGS@
+CFLAGS		= $(CONFIG_CFLAGS) -Wall -fPIC -fsanitize=address
+LDFLAGS		= @LDFLAGS@ -fsanitize=address
 LIBS		= @LIBS@
 PATHSEP		= /
 
@@ -599,6 +599,8 @@ framing_objects :=						\
 	src/framing/src/framesync64.o				\
 	src/framing/src/flexframegen.o				\
 	src/framing/src/flexframesync.o				\
+	src/framing/src/fskframegen.o				\
+	src/framing/src/fskframesync.o				\
 	src/framing/src/gmskframegen.o				\
 	src/framing/src/gmskframesync.o				\
 	src/framing/src/msourcecf.o				\
@@ -630,6 +632,8 @@ src/framing/src/framegen64.o        : %.o : %.c $(include_headers)
 src/framing/src/framesync64.o       : %.o : %.c $(include_headers)
 src/framing/src/flexframegen.o      : %.o : %.c $(include_headers)
 src/framing/src/flexframesync.o     : %.o : %.c $(include_headers)
+src/framing/src/fskframegen.o       : %.o : %.c $(include_headers)
+src/framing/src/fskframesync.o      : %.o : %.c $(include_headers)
 src/framing/src/msourcecf.o         : %.o : %.c $(include_headers) src/framing/src/msource.c
 src/framing/src/ofdmflexframegen.o  : %.o : %.c $(include_headers)
 src/framing/src/ofdmflexframesync.o : %.o : %.c $(include_headers)
@@ -1434,6 +1438,7 @@ example_programs :=						\
 	examples/flexframesync_reconfig_example			\
 	examples/framesync64_example				\
 	examples/freqmodem_example				\
+	examples/fskframesync_example				\
 	examples/fskmodem_example				\
 	examples/fskmodem_waterfall_example			\
 	examples/gasearch_example				\
@@ -1485,6 +1490,7 @@ example_programs :=						\
 	examples/polyfit_lagrange_example			\
 	examples/poly_findroots_example				\
 	examples/qdetector_cccf_example				\
+	examples/qdetector_hell						\
 	examples/qpacketmodem_performance_example		\
 	examples/qpacketmodem_example				\
 	examples/qpilotsync_example				\

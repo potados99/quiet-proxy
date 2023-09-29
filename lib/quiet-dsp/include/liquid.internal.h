@@ -1177,6 +1177,22 @@ void bpacketsync_reconfig(bpacketsync _q);
 #define DSSSFRAME_H_FEC0         (LIQUID_FEC_GOLAY2412)
 #define DSSSFRAME_H_FEC1         (LIQUID_FEC_NONE)
 
+
+//
+// fskframe
+//
+
+#define FSKFRAME_PROTOCOL             (107 + PACKETIZER_VERSION)
+#define FSKFRAME_PRE_K                (150)
+#define FSKFRAME_H_USER_DEFAULT       (8)
+#define FSKFRAME_H_DEC                (6)
+#define FSKFRAME_H_CRC                (LIQUID_CRC_32)
+#define FSKFRAME_H_FEC0               (LIQUID_FEC_GOLAY2412)
+#define FSKFRAME_H_FEC1               (LIQUID_FEC_NONE)
+#define FSKFRAME_H_BITS_PER_SYMBOL    (1)
+#define FSKFRAME_H_SAMPLES_PER_SYMBOL (4)
+
+
 //
 // MODULE : math
 //
@@ -1878,5 +1894,42 @@ extern unsigned int liquid_c_leading_zeros[256];
 
 // byte reversal and manipulation
 extern const unsigned char liquid_reverse_byte_gentab[256];
+
+typedef struct symbolreader_s * symbolreader;
+
+symbolreader symbolreader_create();
+
+void symbolreader_reset(symbolreader          _r,
+                        const unsigned char * _src,
+                        unsigned int          _src_len);
+
+void symbolreader_destroy(symbolreader _r);
+
+int symbolreader_read(symbolreader   _r,
+                      unsigned int   _len,
+                      unsigned int * _out);
+
+unsigned int symbolreader_length(symbolreader _r);
+
+
+typedef struct symbolwriter_s * symbolwriter;
+
+symbolwriter symbolwriter_create();
+
+void symbolwriter_reset(symbolwriter _w,
+                        unsigned int _len);
+
+void symbolwriter_destroy(symbolwriter _w);
+
+int symbolwriter_write(symbolwriter _w,
+                       unsigned int _len,
+                       unsigned int _symbol);
+
+// caller must not access this pointer after destroy()
+const unsigned char * symbolwriter_bytes(symbolwriter _w);
+
+// in bits
+unsigned int symbolwriter_length(symbolwriter _w);
+
 #endif // __LIQUID_INTERNAL_H__
 

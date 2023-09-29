@@ -106,6 +106,7 @@ qdetector_cccf qdetector_cccf_create(liquid_float_complex * _s,
 
     // prepare transforms
     q->nfft       = 1 << liquid_nextpow2( (unsigned int)( 2 * q->s_len ) ); // NOTE: must be even
+    // printf("nfft: %d s_len: %d\n", q->nfft, q->s_len);
     q->buf_time_0 = (liquid_float_complex*) malloc(q->nfft * sizeof(liquid_float_complex));
     q->buf_freq_0 = (liquid_float_complex*) malloc(q->nfft * sizeof(liquid_float_complex));
     q->buf_freq_1 = (liquid_float_complex*) malloc(q->nfft * sizeof(liquid_float_complex));
@@ -183,6 +184,10 @@ qdetector_cccf qdetector_cccf_create_linear(liquid_float_complex * _sequence,
         firinterp_crcf_execute(interp, i < _sequence_len ? _sequence[i] : 0, &s[_k*i]);
     firinterp_crcf_destroy(interp);
 
+    for (i = 0; i < _sequence_len; i++) {
+        // printf("% .2f, % .2fi\n", crealf(_sequence[i]), cimagf(_sequence[i]));
+    }
+
     // create main object
     qdetector_cccf q = qdetector_cccf_create(s, s_len);
 
@@ -241,6 +246,10 @@ qdetector_cccf qdetector_cccf_create_gmsk(unsigned char * _sequence,
 
 void qdetector_cccf_destroy(qdetector_cccf _q)
 {
+    if (!_q) {
+        return;
+    }
+
     // free allocated arrays
     free(_q->s         );
     free(_q->S         );
@@ -269,6 +278,14 @@ void qdetector_cccf_print(qdetector_cccf _q)
 
 void qdetector_cccf_reset(qdetector_cccf _q)
 {
+    printf("qdetector reset\n");
+    _q->counter        = _q->nfft / 2;
+    _q->x2_sum_0       = 0.0f;
+    _q->x2_sum_1       = 0.0f;
+    _q->state          = QDETECTOR_STATE_SEEK;
+    _q->frame_detected = 0;
+    memset(_q->buf_time_0, 0x00, _q->nfft * sizeof(liquid_float_complex));
+    memset(_q->buf_time_1, 0x00, _q->nfft * sizeof(liquid_float_complex));
 }
 
 void * qdetector_cccf_execute(qdetector_cccf _q,
@@ -393,6 +410,14 @@ void qdetector_cccf_execute_seek(qdetector_cccf _q,
     if (_q->counter < _q->nfft)
         return;
     
+
+    /*
+    printf("qdetector buf 0:");
+    for (unsigned int i = 0; i <_q->nfft/2; i++) {
+        printf(" %.2f + %.2fi,", crealf(_q->buf_time_0[i + _q->nfft/2]), cimagf(_q->buf_time_0[i + _q->nfft/2]));
+    }
+    printf("\n");
+    */
     // reset counter (last half of time buffer)
     _q->counter = _q->nfft/2;
 
@@ -417,13 +442,36 @@ void qdetector_cccf_execute_seek(qdetector_cccf _q,
         return;
     }
     float g = 1.0f / ((float)(_q->nfft) * g0 * sqrtf(_q->s2_sum));
-    
+
     // sweep over carrier frequency offset range
     int offset;
     unsigned int i;
     float        rxy_peak   = 0.0f;
     unsigned int rxy_index  = 0;
     int          rxy_offset = 0;
+#if DEBUG_QDETECTOR
+    // debug output
+    char filename[64];
+    sprintf(filename,"qdetector_out_%d.txt", _q->num_transforms);
+    FILE * fid = fopen(filename, "w");
+    fprintf(fid, "#\n#\n");
+    fprintf(fid, "# name: nfft\n# type: scalar\n%u\n\n", _q->nfft);
+    fprintf(fid, "# name: g\n# type: scalar\n%12.4e\n\n", g);
+    fprintf(fid, "# name: pn_len\n# type: scalar\n%u\n\n", _q->s_len);
+    fprintf(fid, "# name: g0\n# type: scalar\n%12.4e\n\n", g0);
+    fprintf(fid, "# name: pn\n# type: complex matrix\n# rows: 1\n# columns: %u\n", _q->nfft);
+    for (i=0; i<_q->s_len; i++)
+        fprintf(fid, " (%12.4e,%12.4e)", crealf(_q->s[i]), cimagf(_q->s[i]));
+    for (i=_q->s_len; i<_q->nfft; i++)
+        fprintf(fid, " (0,0)");
+    fprintf(fid, "\n\n");
+    fprintf(fid, "# name: x\n# type: complex matrix\n# rows: 1\n# columns: %u\n", _q->nfft);
+    for (i=0; i<_q->nfft; i++)
+        fprintf(fid," (%12.4e,%12.4e)", crealf(_q->buf_time_0[i]), cimagf(_q->buf_time_0[i]));
+    fprintf(fid, "\n\n");
+    fprintf(fid, "# name: rxy\n# type: complex matrix\n# rows: %u\n# columns: %u\n", 2 * _q->range + 1, _q->nfft);
+#endif
+
     // NOTE: this offset may be coarse as a fine carrier estimate is computed later
     for (offset=-_q->range; offset<=_q->range; offset++) {
 
@@ -443,22 +491,9 @@ void qdetector_cccf_execute_seek(qdetector_cccf _q,
 
 #if DEBUG_QDETECTOR
         // debug output
-        char filename[64];
-        sprintf(filename,"qdetector_out_%u_%d.m", _q->num_transforms, offset+2);
-        FILE * fid = fopen(filename, "w");
-        fprintf(fid,"clear all; close all;\n");
-        fprintf(fid,"nfft = %u;\n", _q->nfft);
         for (i=0; i<_q->nfft; i++)
-            fprintf(fid,"rxy(%6u) = %12.4e + 1i*%12.4e;\n", i+1, crealf(_q->buf_time_1[i]), cimagf(_q->buf_time_1[i]));
-        fprintf(fid,"figure;\n");
-        fprintf(fid,"t=[0:(nfft-1)];\n");
-        fprintf(fid,"plot(t,abs(rxy));\n");
-        fprintf(fid,"grid on;\n");
-        fprintf(fid,"axis([0 %u 0 1.5]);\n", _q->nfft);
-        fprintf(fid,"[v i] = max(abs(rxy));\n");
-        fprintf(fid,"title(sprintf('peak of %%12.8f at index %%u', v, i));\n");
-        fclose(fid);
-        printf("debug: %s\n", filename);
+            fprintf(fid," (%12.4e, %12.4e)", crealf(_q->buf_time_1[i]), cimagf(_q->buf_time_1[i]));
+        fprintf(fid, "\n");
 #endif
         // search for peak
         // TODO: only search over range [-nfft/2, nfft/2)
@@ -470,7 +505,20 @@ void qdetector_cccf_execute_seek(qdetector_cccf _q,
                 rxy_offset = offset;
             }
         }
+
+        if (rxy_peak > _q->threshold && rxy_offset == offset) {
+            i = rxy_index;
+            unsigned int n = _q->nfft;
+            printf("qdetector %.3f %.3f %.3f %.3f %.3f [%.3f] %.3f %.3f\n", cabsf(_q->buf_time_1[(i + n - 5) % n]), cabsf(_q->buf_time_1[(i + n - 4) % n]), cabsf(_q->buf_time_1[(i + n - 3) %n]), cabsf(_q->buf_time_1[(i + n - 2) % n]), cabsf(_q->buf_time_1[(i + n - 1) % n]), cabsf(_q->buf_time_1[i]), cabsf(_q->buf_time_1[(i + 1) % n]), cabsf(_q->buf_time_1[(i + 2) % n]));
+        }
     }
+
+#if DEBUG_QDETECTOR
+    fprintf(fid, "\n");
+    fprintf(fid, "# name: peak\n# type: scalar\n%12.4e\n\n", rxy_peak);
+    fprintf(fid, "# name: peak_offset\n# type: scalar\n%u\n\n", rxy_offset + _q->range + 1);
+    fclose(fid);
+#endif
 
     // increment number of transforms (debugging)
     _q->num_transforms++;
@@ -487,7 +535,7 @@ void qdetector_cccf_execute_seek(qdetector_cccf _q,
 
         // copy last part of fft input buffer to front
         memmove(_q->buf_time_0, _q->buf_time_0 + rxy_index, (_q->nfft - rxy_index)*sizeof(liquid_float_complex));
-        _q->counter = _q->nfft - rxy_index;
+        _q->counter = _q->nfft - rxy_index - 1;
 
         return;
     }
@@ -528,9 +576,12 @@ void qdetector_cccf_execute_align(qdetector_cccf _q,
     fft_execute(_q->ifft);
     // time aligned to index 0
     // NOTE: taking the sqrt removes bias in the timing estimate, but messes up gamma estimate
-    float yneg = cabsf(_q->buf_time_1[_q->nfft-1]);  yneg = sqrtf(yneg);
-    float y0   = cabsf(_q->buf_time_1[         0]);  y0   = sqrtf(y0  );
-    float ypos = cabsf(_q->buf_time_1[         1]);  ypos = sqrtf(ypos);
+    float yneg = cabsf(_q->buf_time_1[_q->nfft - 1]);
+    yneg       = sqrtf(yneg);
+    float y0   = cabsf(_q->buf_time_1[0]);
+    y0         = sqrtf(y0);
+    float ypos = cabsf(_q->buf_time_1[1]);
+    ypos       = sqrtf(ypos);
     // compute timing offset estimate from quadratic polynomial fit
     //  y = a x^2 + b x + c, [xneg = -1, x0 = 0, xpos = +1]
     float a     =  0.5f*(ypos + yneg) - y0;
@@ -553,7 +604,6 @@ void qdetector_cccf_execute_align(qdetector_cccf _q,
     char filename[64];
     sprintf(filename,"qdetector_fft.m");
     FILE * fid = fopen(filename, "w");
-    fprintf(fid,"clear all; close all;\n");
     fprintf(fid,"nfft = %u;\n", _q->nfft);
     for (i=0; i<_q->nfft; i++)
         fprintf(fid,"V(%6u) = %12.4e + 1i*%12.4e;\n", i+1, crealf(_q->buf_freq_0[i]), cimagf(_q->buf_freq_0[i]));

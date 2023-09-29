@@ -31,7 +31,8 @@
 
 #include "liquid.internal.h"
 
-#define DEBUG_FSKDEM 0
+#define DEBUG_FSKDEM        1
+#define DEBUG_FSKDEM_PRINT  1
 
 // 
 // internal methods
@@ -55,6 +56,8 @@ struct fskdem_s {
 
     // state variables
     unsigned int    s_demod;    // demodulated symbol (used for frequency error)
+
+    unsigned int    num_demods;
 };
 
 // create fskdem object (frequency demodulator)
@@ -89,6 +92,8 @@ fskdem fskdem_create(unsigned int _m,
     q->M  = 1 << q->m;              // constellation size
     q->M2 = 0.5f*(float)(q->M-1);   // (M-1)/2
 
+    q->num_demods = 0;
+
     // compute demodulation FFT size such that FFT output bin frequencies are
     // as close to modulated frequencies as possible
     float        df = q->bandwidth / q->M2;         // frequency spacing
@@ -101,7 +106,7 @@ fskdem fskdem_create(unsigned int _m,
         float v     = 0.5f*df*(float)K_hat;         // bin spacing
         float err = fabsf( roundf(v) - v );         // fractional bin spacing
 
-#if DEBUG_FSKDEM
+#if DEBUG_FSKDEM_PRINT
         // print results
         printf("  K_hat = %4u : v = %12.8f, err=%12.8f %s\n", K_hat, v, err, err < err_min ? "*" : "");
 #endif
@@ -127,7 +132,7 @@ fskdem fskdem_create(unsigned int _m,
         float idx  = freq * (float)(q->K);
         unsigned int index = (unsigned int) (idx < 0 ? roundf(idx + q->K) : roundf(idx));
         q->demod_map[i] = index;
-#if DEBUG_FSKDEM
+#if DEBUG_FSKDEM_PRINT
         printf("  s=%3u, f = %12.8f, index=%3u\n", i, freq, index);
 #endif
     }
@@ -155,6 +160,10 @@ fskdem fskdem_create(unsigned int _m,
 // destroy fskdem object
 void fskdem_destroy(fskdem _q)
 {
+    if (!_q) {
+        return;
+    }
+
     // free allocated arrays
     free(_q->demod_map);
     free(_q->buf_time);
@@ -215,6 +224,29 @@ unsigned int fskdem_demodulate(fskdem          _q,
             vmax = v;
         }
     }
+
+#if DEBUG_FSKDEM
+    char filename[64];
+    sprintf(filename,"fskdem_out_%d.txt", _q->num_demods);
+    FILE * fid = fopen(filename, "w");
+    fprintf(fid, "#\n#\n");
+    fprintf(fid, "# name: len\n# type: scalar\n%u\n\n", _q->k);
+    fprintf(fid, "# name: bps\n# type: scalar\n%u\n\n", _q->m);
+    fprintf(fid, "# name: fft_len\n#type: scalar\n%u\n\n", _q->K);
+    fprintf(fid, "# name: samples\n# type: complex matrix\n# rows: 1\n# columns: %u\n", _q->k);
+    for (s=0; s<_q->k; s++) {
+        fprintf(fid, " (%12.4e,%12.4e)", crealf(_y[s]), cimagf(_y[s]));
+    }
+    fprintf(fid, "\n\n");
+    fprintf(fid, "# name: map\n# type: matrix \n# rows: 1\n# columns: %u\n", _q->M);
+    for (s=0; s<_q->M; s++) {
+        fprintf(fid, " %u", _q->demod_map[s]);
+    }
+    fprintf(fid, "\n\n");
+    fclose(fid);
+#endif
+
+    _q->num_demods++;
 
     // save best result
     return _q->s_demod;

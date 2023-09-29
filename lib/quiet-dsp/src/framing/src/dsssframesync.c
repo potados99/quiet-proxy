@@ -89,7 +89,7 @@ struct dsssframesync_s {
     synth_crcf             payload_synth;
 
     int                    header_soft;
-    flexframegenprops_s    header_props;
+    dsssframegenprops_s    header_props;
     liquid_float_complex * header_spread;
     unsigned int           header_spread_len;
     qpacketmodem           header_decoder;
@@ -386,7 +386,7 @@ void dsssframesync_execute_rxpreamble(dsssframesync _q, liquid_float_complex _x)
     }
 
     // save output in p/n symbols buffer
-    unsigned int delay = _q->k * _q->m; // delay from matched filter
+    unsigned int delay = 2 * _q->m; // delay from matched filter
     if (_q->preamble_counter >= delay) {
         unsigned int index     = _q->preamble_counter - delay;
         _q->preamble_rx[index] = mf_out;
@@ -553,6 +553,8 @@ void dsssframesync_execute_rxpayload(dsssframesync _q, liquid_float_complex _x)
     _q->framesyncstats.check = qpacketmodem_get_crc(_q->payload_decoder);
     _q->framesyncstats.fec0  = qpacketmodem_get_fec0(_q->payload_decoder);
     _q->framesyncstats.fec1  = qpacketmodem_get_fec1(_q->payload_decoder);
+
+    // XXX set all framesyncstats
 
     if (_q->callback != NULL) {
         _q->callback(_q->header_dec,
