@@ -931,6 +931,9 @@ set(vector_AUTOTESTS_SOURCES )
 
 set(vector_BENCHMARKS_SOURCES )
 
+set(HAVE_FEC_H 1)
+set(HAVE_LIBFEC 1)
+
 #
 # Generate config.h file.
 #
