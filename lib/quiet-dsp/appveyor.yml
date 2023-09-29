@@ -1,0 +1,47 @@
+version: '{build}'
+
+build:
+    verbosity: detailed
+
+branches:
+    only:
+        - devel
+        - mega_merge
+
+environment:
+    matrix:
+        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+          COMPILER: cl.exe
+          MSVC_BAT: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
+          MSVC_BAT_ARCH: x86
+          GENERATOR: "Visual Studio 14 2015 Win64"
+
+before_build:
+    - if DEFINED MSVC_BAT call "%MSVC_BAT%" %MSVC_BAT_ARCH%
+
+    - git clone https://github.com/quiet/libcorrect.git C:\projects\libcorrect
+
+    - cd C:\projects\libcorrect
+
+    - mkdir build
+    - cd build
+    - cmake -G "%GENERATOR%" -DCMAKE_C_COMPILER=%COMPILER% -DCMAKE_CXX_COMPILER=%COMPILER% -DCMAKE_BUILD_TYPE=Release ..
+    - cmake --build . --config Release
+    - cmake --build . --config Release --target shim
+
+    - cd %APPVEYOR_BUILD_FOLDER%
+
+build_script:
+    - set "INCLUDE=%INCLUDE%;C:\projects\libcorrect\build\include"
+    - set "LIB=%LIB%;C:\projects\libcorrect\build\lib\Release"
+
+    - mkdir build
+    - cd build
+    - cmake -G "%GENERATOR%" -DCMAKE_C_COMPILER=%COMPILER% -DCMAKE_CXX_COMPILER=%COMPILER% -DCMAKE_BUILD_TYPE=Release -DLIQUID_BUILD_EXAMPLES=off -DLIQUID_BUILD_SANDBOX=off ..
+    - cmake --build . --config Release
+    - cmake --build . --config Release --target autotest
+
+test_script:
+    - cd %APPVEYOR_BUILD_FOLDER%
+    - cd build
+    - Release\autotest.exe

@@ -1,0 +1,29 @@
+language: cpp
+
+matrix:
+    include:
+        - os: linux
+          compiler: gcc
+          env: BUILD_CXX=off
+        - os: linux
+          compiler: gcc
+          env: BUILD_CXX=on
+        - os: osx
+          compiler: clang
+          env: BUILD_CXX=off
+        - os: osx
+          compiler: clang
+          env: BUILD_CXX=on
+
+script:
+    - git clone https://github.com/quiet/libcorrect.git
+    - cd libcorrect
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_BUILD_TYPE=Release .. && make && make shim
+    - sudo make install
+    - cd ../..
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_BUILD_TYPE=Release -DLIQUID_BUILD_EXAMPLES="off" -DLIQUID_BUILD_SANDBOX="off" -DLIQUID_CXX=$BUILD_CXX .. && make liquid-static liquid-shared autotest
+    - make autotest_run

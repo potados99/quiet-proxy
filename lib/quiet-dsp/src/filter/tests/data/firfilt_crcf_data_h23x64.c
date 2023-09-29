@@ -1,0 +1,188 @@
+/*
+ * Copyright (c) 2007 - 2015 Joseph Gaeddert
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+//
+// firfilt_crcf_data_h23x64.c: autotest firfilt data
+//
+
+
+
+#include "liquid.h"
+#include "autotest/autotest.h"
+
+float firfilt_crcf_data_h23x64_h[] = {
+    0.158654410967,
+   -0.020397216842,
+   -0.054283334982,
+    0.077922310650,
+   -0.072938526203,
+   -0.018649195029,
+    0.037699516688,
+    0.039617662775,
+   -0.201106990060,
+   -0.045133363773,
+   -0.083275831491,
+   -0.080588772189,
+   -0.009860694810,
+    0.086105167459,
+    0.145475786114,
+   -0.015729607185,
+   -0.064199255334,
+   -0.041339777246,
+    0.031333251672,
+   -0.178929283974,
+   -0.144469434532,
+   -0.088642880661,
+    0.061210119166};
+
+liquid_float_complex firfilt_crcf_data_h23x64_x[] = {
+   -0.061754655621f +   0.035123551291f*_Complex_I,
+   -0.042987945529f +   0.204710494551f*_Complex_I,
+   -0.115448103025f +  -0.048546960311f*_Complex_I,
+   -0.107929842580f +  -0.067280385493f*_Complex_I,
+   -0.138103588190f +   0.010448310166f*_Complex_I,
+   -0.001556297552f +   0.087792883061f*_Complex_I,
+    0.046355639811f +   0.064514990229f*_Complex_I,
+   -0.073718979418f +   0.103212389197f*_Complex_I,
+   -0.167000830993f +  -0.051389222147f*_Complex_I,
+   -0.014426416714f +   0.176317900074f*_Complex_I,
+   -0.107373342455f +  -0.005804161965f*_Complex_I,
+    0.080493073150f +  -0.061646586042f*_Complex_I,
+    0.027796421084f +  -0.154117176222f*_Complex_I,
+    0.146227243025f +  -0.085442723323f*_Complex_I,
+   -0.069720789489f +   0.186876621048f*_Complex_I,
+    0.062823376713f +   0.065977046975f*_Complex_I,
+    0.090031816754f +   0.114581114467f*_Complex_I,
+    0.086442323768f +   0.125045380084f*_Complex_I,
+    0.019615700330f +  -0.022164049481f*_Complex_I,
+    0.002010913947f +   0.016348332723f*_Complex_I,
+    0.115492888651f +  -0.140112679132f*_Complex_I,
+   -0.000370552599f +   0.115418598778f*_Complex_I,
+    0.171462023973f +   0.045787506437f*_Complex_I,
+   -0.044111687463f +  -0.011704116119f*_Complex_I,
+   -0.267816339997f +   0.084734013406f*_Complex_I,
+    0.013814245144f +   0.002740227971f*_Complex_I,
+    0.090220778414f +   0.134830380675f*_Complex_I,
+   -0.106145737111f +  -0.024658098491f*_Complex_I,
+   -0.112807070004f +   0.044997920710f*_Complex_I,
+   -0.192053613103f +  -0.062114377970f*_Complex_I,
+   -0.079637314543f +   0.045259089396f*_Complex_I,
+    0.012470128523f +  -0.117498759881f*_Complex_I,
+   -0.029098880159f +   0.100511335166f*_Complex_I,
+    0.076820185739f +  -0.000579442122f*_Complex_I,
+   -0.146557365265f +   0.068919305920f*_Complex_I,
+    0.046650052137f +   0.086754950098f*_Complex_I,
+    0.049312254431f +   0.100155311839f*_Complex_I,
+   -0.018181427657f +  -0.155695073922f*_Complex_I,
+   -0.020818721382f +   0.050839229113f*_Complex_I,
+    0.075624933038f +  -0.140809485613f*_Complex_I,
+    0.024131064286f +  -0.061085135867f*_Complex_I,
+   -0.031646019927f +  -0.020171616314f*_Complex_I,
+    0.029466323016f +  -0.143095954720f*_Complex_I,
+   -0.000140873686f +   0.104732973661f*_Complex_I,
+    0.124462359562f +  -0.105079943629f*_Complex_I,
+   -0.058374142846f +   0.033466529094f*_Complex_I,
+    0.026595988216f +   0.220281782376f*_Complex_I,
+   -0.007221829817f +   0.141135026450f*_Complex_I,
+   -0.021218003577f +  -0.050066565886f*_Complex_I,
+    0.035694484054f +   0.231602026762f*_Complex_I,
+    0.102466686268f +  -0.099286054817f*_Complex_I,
+   -0.054792214672f +   0.060392934122f*_Complex_I,
+   -0.001852582407f +   0.025794064903f*_Complex_I,
+    0.071274514129f +   0.142237231718f*_Complex_I,
+    0.029476880291f +   0.023165981190f*_Complex_I,
+   -0.027797892310f +  -0.051616914281f*_Complex_I,
+    0.061786844168f +   0.001190554171f*_Complex_I,
+    0.041304624689f +  -0.028506531399f*_Complex_I,
+   -0.075701492591f +  -0.019189579127f*_Complex_I,
+   -0.043195431393f +  -0.100084431779f*_Complex_I,
+    0.039964361882f +   0.004559897250f*_Complex_I,
+   -0.252729884604f +  -0.091698894534f*_Complex_I,
+   -0.056671384848f +   0.100393269844f*_Complex_I,
+    0.047875493425f +  -0.053453060952f*_Complex_I};
+
+liquid_float_complex firfilt_crcf_data_h23x64_y[] = {
+   -0.009797648512f +   0.005572506341f*_Complex_I,
+   -0.005560604075f +   0.031761800240f*_Complex_I,
+   -0.014087267678f +  -0.013784337240f*_Complex_I,
+   -0.017247262021f +  -0.018059567129f*_Complex_I,
+   -0.012287793463f +   0.019054948700f*_Complex_I,
+    0.003719976223f +  -0.002001383647f*_Complex_I,
+    0.013367035883f +   0.003682443788f*_Complex_I,
+   -0.017360179024f +   0.026029334165f*_Complex_I,
+   -0.009179615321f +  -0.007210433367f*_Complex_I,
+    0.014210107693f +  -0.025365792504f*_Complex_I,
+    0.004045839585f +  -0.004700697501f*_Complex_I,
+    0.037185762921f +  -0.032401586998f*_Complex_I,
+    0.069046316115f +  -0.013271584282f*_Complex_I,
+    0.033064747039f +  -0.020579633062f*_Complex_I,
+   -0.010997016057f +   0.045070901497f*_Complex_I,
+    0.004422576554f +   0.002390243257f*_Complex_I,
+    0.033125238067f +  -0.006016697456f*_Complex_I,
+   -0.016975087630f +  -0.035483520861f*_Complex_I,
+    0.038314599881f +  -0.033008052971f*_Complex_I,
+    0.036960796853f +   0.013280585218f*_Complex_I,
+    0.048652304550f +  -0.021208466846f*_Complex_I,
+   -0.029006820125f +   0.022587827802f*_Complex_I,
+    0.028022156827f +   0.005836099363f*_Complex_I,
+    0.022094506847f +   0.031041275846f*_Complex_I,
+   -0.052928165220f +  -0.021052052066f*_Complex_I,
+    0.018511503181f +  -0.110568047514f*_Complex_I,
+    0.013151749885f +  -0.084455750067f*_Complex_I,
+   -0.002103151576f +  -0.014246866235f*_Complex_I,
+   -0.004981810769f +   0.036099080474f*_Complex_I,
+    0.027562144328f +  -0.004142628424f*_Complex_I,
+   -0.062965485082f +  -0.000721660223f*_Complex_I,
+    0.001355528130f +   0.039494603193f*_Complex_I,
+   -0.013676340973f +   0.019821560124f*_Complex_I,
+    0.017190322837f +  -0.023603201848f*_Complex_I,
+   -0.013639010839f +  -0.090413596530f*_Complex_I,
+    0.035568646535f +  -0.005785803158f*_Complex_I,
+    0.009541669638f +  -0.037656127703f*_Complex_I,
+   -0.037436737172f +  -0.045380997215f*_Complex_I,
+   -0.001373976193f +  -0.005853270514f*_Complex_I,
+    0.037863401295f +   0.058080181959f*_Complex_I,
+    0.036122757372f +  -0.031465040781f*_Complex_I,
+   -0.080256218002f +   0.010144726857f*_Complex_I,
+   -0.012130289685f +  -0.064577476905f*_Complex_I,
+    0.001740193468f +  -0.024376309816f*_Complex_I,
+    0.062877940058f +  -0.049615721082f*_Complex_I,
+    0.020116976889f +  -0.036592663265f*_Complex_I,
+   -0.000380054511f +   0.039223753313f*_Complex_I,
+    0.017068821785f +   0.021526831643f*_Complex_I,
+    0.021954695055f +   0.037691348334f*_Complex_I,
+    0.067990755649f +   0.068783656132f*_Complex_I,
+    0.037145711035f +   0.043650952232f*_Complex_I,
+   -0.014003385917f +  -0.065891325372f*_Complex_I,
+   -0.048189055475f +   0.056129109261f*_Complex_I,
+    0.057414520047f +  -0.036184434048f*_Complex_I,
+   -0.016064913162f +  -0.054756587631f*_Complex_I,
+   -0.016229690128f +  -0.092689300019f*_Complex_I,
+    0.009080345865f +   0.006957646952f*_Complex_I,
+    0.017213929524f +  -0.068928651567f*_Complex_I,
+   -0.036862824002f +   0.024446597685f*_Complex_I,
+   -0.018313177259f +   0.012846228600f*_Complex_I,
+   -0.002556177228f +   0.060786016298f*_Complex_I,
+   -0.069716561264f +   0.004791194532f*_Complex_I,
+   -0.004221111697f +  -0.015828369005f*_Complex_I,
+    0.018252044788f +   0.020184229477f*_Complex_I};
+

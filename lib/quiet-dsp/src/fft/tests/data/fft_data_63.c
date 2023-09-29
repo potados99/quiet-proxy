@@ -1,0 +1,161 @@
+/*
+ * Copyright (c) 2007 - 2015 Joseph Gaeddert
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+//
+// autotest fft data for 63-point transform
+//
+
+
+
+#include "liquid.h"
+#include "autotest/autotest.h"
+
+liquid_float_complex fft_test_x63[] = {
+   -0.165065089334f +   1.102101871091f*_Complex_I,
+   -0.981973148546f +   0.541468656777f*_Complex_I,
+   -0.253554650102f +  -0.121332795252f*_Complex_I,
+    0.944969891304f +  -0.207365910694f*_Complex_I,
+    0.435801732783f +   1.116850636842f*_Complex_I,
+   -2.058668461583f +   1.768420128659f*_Complex_I,
+    0.404062083774f +  -1.055764673267f*_Complex_I,
+   -1.173590903686f +   0.058528368777f*_Complex_I,
+   -0.598414155862f +  -0.497560622574f*_Complex_I,
+   -1.861198860149f +   0.229658791022f*_Complex_I,
+   -2.562456370500f +   0.495624931472f*_Complex_I,
+    0.673656989316f +   2.905410000205f*_Complex_I,
+    0.867056802014f +   1.798292948964f*_Complex_I,
+   -2.078980954663f +   0.098338397564f*_Complex_I,
+   -0.330038784071f +   0.481340360434f*_Complex_I,
+    1.276384585521f +   1.297002232435f*_Complex_I,
+    0.261810533047f +  -1.797403878425f*_Complex_I,
+   -2.153713373163f +  -0.426579749412f*_Complex_I,
+    0.065709110586f +  -0.887295333513f*_Complex_I,
+   -0.504714672950f +  -0.491403278968f*_Complex_I,
+    0.314910052074f +  -0.711703174875f*_Complex_I,
+    0.817545815846f +   2.684246900528f*_Complex_I,
+    0.899097356674f +   2.316804935463f*_Complex_I,
+    1.234132120370f +  -0.619880076717f*_Complex_I,
+    0.791329122849f +  -1.491623691612f*_Complex_I,
+   -1.543373050418f +  -0.676542277175f*_Complex_I,
+    0.671442701409f +   0.216191301849f*_Complex_I,
+    0.131373689049f +   0.579119405459f*_Complex_I,
+   -0.372079387235f +  -0.810986260520f*_Complex_I,
+    0.509295824480f +   2.533724020332f*_Complex_I,
+    1.724705779066f +   0.166621824873f*_Complex_I,
+    1.578021811166f +   0.495673960042f*_Complex_I,
+   -0.388517506381f +   0.654051926694f*_Complex_I,
+    0.780148148992f +  -1.186745985806f*_Complex_I,
+   -0.998699640841f +  -2.290498316764f*_Complex_I,
+    1.225655499248f +   0.539258663300f*_Complex_I,
+    0.647174747272f +  -1.701050133294f*_Complex_I,
+   -1.961810462975f +  -0.885111538141f*_Complex_I,
+    0.708722105215f +   2.298722273781f*_Complex_I,
+    0.003407269436f +  -0.160897403251f*_Complex_I,
+   -1.461677661847f +   0.035003203295f*_Complex_I,
+   -0.003031847788f +   0.263418857310f*_Complex_I,
+   -0.921189208563f +  -0.548149166993f*_Complex_I,
+    1.607243811931f +   1.460044138769f*_Complex_I,
+    1.474955000858f +  -0.319625335378f*_Complex_I,
+   -1.479420038984f +   0.442261731228f*_Complex_I,
+   -0.501705519202f +  -0.107677110586f*_Complex_I,
+   -0.555052849202f +  -2.288466181238f*_Complex_I,
+    0.115695886330f +   0.958546419969f*_Complex_I,
+   -0.272372848704f +  -0.160652497732f*_Complex_I,
+    0.329785731274f +  -0.424936229335f*_Complex_I,
+    0.480745655276f +   1.205406168541f*_Complex_I,
+    0.070825951395f +   2.104542991271f*_Complex_I,
+   -0.006185321246f +   0.587388482318f*_Complex_I,
+   -0.694069041213f +   0.770735193308f*_Complex_I,
+    0.908386043892f +  -1.602236263851f*_Complex_I,
+   -0.699555084329f +   0.976937982289f*_Complex_I,
+   -0.954674992562f +  -0.016401236894f*_Complex_I,
+   -0.309302754137f +   0.958214618988f*_Complex_I,
+   -0.127271579222f +   1.856678631720f*_Complex_I,
+   -0.871347344939f +  -2.036988579664f*_Complex_I,
+    0.135839855058f +  -0.627341937358f*_Complex_I,
+   -0.335848209970f +  -2.547865701465f*_Complex_I};
+
+liquid_float_complex fft_test_y63[] = {
+   -7.089662066859f +   9.296545614813f*_Complex_I,
+   -8.501752827269f +   5.888942352564f*_Complex_I,
+    3.278359396134f +   3.509899786067f*_Complex_I,
+    5.034502581381f + -10.325422246173f*_Complex_I,
+    0.779395837363f + -11.641131257781f*_Complex_I,
+    6.583373182868f +  -0.765170650399f*_Complex_I,
+    7.673022911242f +   5.376349934527f*_Complex_I,
+    6.901124231347f + -11.572359190453f*_Complex_I,
+  -12.551588348101f +  -5.650836104556f*_Complex_I,
+   13.135291423808f +  -9.005088743334f*_Complex_I,
+    6.256581548275f +   7.656394164588f*_Complex_I,
+   -9.007597317001f +   6.540328187752f*_Complex_I,
+    5.970311877450f +  11.718061229294f*_Complex_I,
+    3.567004157825f +   0.672928597121f*_Complex_I,
+  -14.427943038803f +   8.900678790697f*_Complex_I,
+    1.056847529506f +   3.528462625077f*_Complex_I,
+   13.620920754920f +  14.305922963856f*_Complex_I,
+    8.760078200432f +  11.222488908434f*_Complex_I,
+    5.722531558556f +   7.234622735459f*_Complex_I,
+   -5.247983376866f + -11.345081644681f*_Complex_I,
+    1.314257740811f +   1.904662960921f*_Complex_I,
+    0.730895747988f +   5.589496067590f*_Complex_I,
+    6.527229987789f + -10.176960210420f*_Complex_I,
+   -4.341510788445f +  -8.731233871509f*_Complex_I,
+    7.581071089827f +  -9.540336644811f*_Complex_I,
+    4.648868334483f +  -7.155035929172f*_Complex_I,
+   -2.205072254220f +  17.534621681153f*_Complex_I,
+    6.858512702532f +   3.813829755562f*_Complex_I,
+    0.193418696750f +  11.693363675036f*_Complex_I,
+    5.619907773283f +   4.653892039135f*_Complex_I,
+   -1.855582230893f +  10.861851324746f*_Complex_I,
+   14.627670681377f +  -2.489204973764f*_Complex_I,
+    0.605824410285f +  -7.016190132363f*_Complex_I,
+    2.624656390216f +   3.561441210498f*_Complex_I,
+    0.709206425704f +  12.728091932012f*_Complex_I,
+   -3.982794699993f +   6.878915353589f*_Complex_I,
+  -13.376734767433f +   1.691306437014f*_Complex_I,
+   -2.349794152830f +  -0.330132617385f*_Complex_I,
+   -3.726616620789f +  15.817788395019f*_Complex_I,
+  -16.729175354871f +  -8.409111133317f*_Complex_I,
+   17.882515293846f +  -3.208404044366f*_Complex_I,
+   -7.470918853421f +  18.877686110403f*_Complex_I,
+   12.668798353590f +  -9.060907565117f*_Complex_I,
+   -6.220564671186f +  -5.153664668923f*_Complex_I,
+   -1.712331740792f + -15.816196915449f*_Complex_I,
+  -11.816550492910f +  12.590312098504f*_Complex_I,
+    5.948638061621f +  10.638444837386f*_Complex_I,
+   13.008103746204f + -15.557670122101f*_Complex_I,
+  -13.266957624044f +   3.898836567164f*_Complex_I,
+   -1.862920665209f +  -4.724933699937f*_Complex_I,
+   -4.695828593392f +   9.661188336137f*_Complex_I,
+   -7.542434926702f +  17.373541879534f*_Complex_I,
+    1.008284652559f +   2.011360297386f*_Complex_I,
+   -6.854631802630f +  -4.014486905376f*_Complex_I,
+   -6.668218293484f +   4.636855650199f*_Complex_I,
+    3.172812378583f + -20.418734887614f*_Complex_I,
+  -23.330375903759f + -12.181015318516f*_Complex_I,
+    6.267118807644f +  17.748053544942f*_Complex_I,
+   -8.369069881119f +   5.704956182541f*_Complex_I,
+    9.266781179990f +  -5.431082220535f*_Complex_I,
+   -2.621123339590f +  -4.576508645033f*_Complex_I,
+    3.116382580437f + -13.991211520556f*_Complex_I,
+  -15.293666222030f +   1.998407515632f*_Complex_I};
+
