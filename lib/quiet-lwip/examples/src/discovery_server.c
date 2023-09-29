@@ -122,6 +122,10 @@ int main(int argc, char **argv) {
      * 그리고 메인 스레드에서는 소켓에 데이터가 들어오기만 하염없이 기다립니다.
      */
 
+    // consume 스레드가 발굴하고 해독하여 쌓아놓은 조각들을 처리하는 루프입니다.
+    // GitHub에 남아 있는 (컴파일 안되는) 코드에서는 이 루프에서 consume 스레드의 일을 대신 합니다.
+    // 즉, Pa가 쌓은 샘플을 직접 해독까지 한 다음에 처리를 시작합니다.
+    // 이전 버전에서는 consume 스레드가 없었습니다. 그 때의 흔적으로 보입니다.
     quiet_lwip_portaudio_audio_threads *audio_threads =
         quiet_lwip_portaudio_start_audio_threads(interface);
 
