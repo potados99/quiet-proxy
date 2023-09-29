@@ -1,8 +1,8 @@
-project(liquid-dsp C CXX)
-
 cmake_minimum_required(VERSION 3.0)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "cmake/Modules")
+project(liquid-dsp C CXX)
+
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
 
 file(READ "include/liquid.h" liquid_h)
 string(REGEX MATCH "\\#define LIQUID_VERSION[ ]+\"([0-9]+\\.[0-9]+\\.[0-9]+)\"" LIQUID_VERSION_MATCHES "${liquid_h}")
@@ -32,7 +32,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 option(LIQUID_FFTOVERRIDE "Force internal FFT even if libfftw is available" OFF)
 option(LIQUID_SIMDOVERRIDE "Force overriding of SIMD (use portable C code)" OFF)
-option(LIQUID_BUILD_SHARED "Build shared library" ON)
+option(LIQUID_BUILD_SHARED "Build shared library" OFF)
 option(LIQUID_BUILD_STATIC "Build static library" ON)
 option(LIQUID_BUILD_EXAMPLES "Build examples" ON)
 option(LIQUID_BUILD_SANDBOX "Build sandbox" ON)
@@ -80,19 +80,6 @@ CHECK_REQUIRED_FUNCTION(cimagf m HAVE_CIMAGF)
 CHECK_REQUIRED_FUNCTION(sqrtf m HAVE_SQRTF)
 
 CHECK_LIBRARY_EXISTS(m sqrtf "" HAVE_LIBM)
-
-find_path(fec_include NAMES fec.h)
-find_library(fec_library NAMES fec)
-find_package_handle_standard_args(Fec DEFAULT_MSG fec_library fec_include)
-mark_as_advanced(fec_include fec_library)
-if(FEC_FOUND)
-    set(HAVE_FEC_H 1)
-    set(HAVE_LIBFEC 1)
-    add_library(fec UNKNOWN IMPORTED)
-    set_target_properties(fec PROPERTIES IMPORTED_LOCATION "${fec_library}" INTERFACE_INCLUDE_DIRECTORIES "${fec_include}")
-else()
-    unset(HAVE_FEC_H CACHE)
-endif ()
 
 find_path(fftw3_include NAMES fftw3.h)
 find_library(fftw3_library NAMES fftw3f)
@@ -1022,6 +1009,12 @@ if (LIQUID_BUILD_STATIC)
     endif ()
     set(LIQUID_STATIC_LIBRARY liquid-static)
 endif ()
+
+set(HAVE_FEC_H 1)
+set(HAVE_LIBFEC 1)
+
+target_include_directories(liquid-static PUBLIC include)
+target_link_libraries(liquid-static fec)
 
 #
 # Build the autoscript tool, needed by autotest and benchmark.
