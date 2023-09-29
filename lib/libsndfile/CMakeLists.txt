@@ -16,60 +16,14 @@ include (CMake/file.cmake)
 # Duplicate the autoconf/autoheader functionality.
 
 # Get the version number from configure.ac.
-execute_process (
-	COMMAND ${GREP} ^AC_INIT configure.ac
-	COMMAND ${SED} "s/.*libsndfile[^0-9]*//;s/\\].*//"
-	OUTPUT_VARIABLE LIB_VERSION
-	)
+set (LIB_VERSION "1.0.28")
 
 string (STRIP ${LIB_VERSION} LIB_VERSION)
 string (REGEX REPLACE "\\..*" "" LIB_VERSION_MAJOR ${LIB_VERSION})
 
 message (STATUS "libsndfile version : ${LIB_VERSION}")
 
-# Generate config.h.in if it does not already exist.
-if (NOT (EXISTS "${CMAKE_SOURCE_DIR}/CMakeFiles/config.h.in"))
-	if (NOT AUTOHEADER)
-		message (FATAL_ERROR "Need autoheader (part of GNU autoconf) to proceed.")
-		endif ()
 
-	message (STATUS "Running autoheader to create src/config.h.in")
-	execute_process (COMMAND ${AUTOHEADER} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-	assert_line_count_non_zero ("${CMAKE_SOURCE_DIR}/src/config.h.in")
-
-	message (STATUS "Post processing src/config.h.in")
-	execute_process (
-		COMMAND ${SED} -E "s/undef([ \\t]+)([a-zA-Z0-8_]+)/define\\1\\2\\1@\\2@/" src/config.h.in
-		COMMAND ${SED} "s/.*_FILE_OFFSET_BITS.*//"
-		OUTPUT_FILE ${CMAKE_SOURCE_DIR}/CMakeFiles/config.h.in
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-		)
-
-	execute_process (
-		COMMAND ${GREP} -c undef ${CMAKE_SOURCE_DIR}/CMakeFiles/config.h.in
-		OUTPUT_VARIABLE undef_count
-		)
-
-	if (${undef_count} GREATER 0)
-		message (FATAL_ERROR "CMake processing of CMakeFIles/config.h.in has failed.")
-		endif ()
-	endif ()
-
-assert_line_count_non_zero ("${CMAKE_SOURCE_DIR}/CMakeFiles/config.h.in")
-
-# Use autogen to generate files if they don't already exist.
-include (CMake/autogen.cmake)
-lsf_autogen (src test_endswap)
-lsf_autogen (tests pcm_test)
-lsf_autogen (tests utils)
-lsf_autogen (tests floating_point_test)
-lsf_autogen (tests header_test)
-lsf_autogen (tests pipe_test)
-lsf_autogen (tests write_read_test)
-lsf_autogen (tests scale_clip_test)
-lsf_autogen (tests rdwr_test)
-lsf_autogen (tests benchmark)
 
 if (DEFINED ENV{CC})
 	set (CMAKE_C_COMPILER $ENV{CC})
@@ -91,7 +45,7 @@ set (PACKAGE_NAME \"libsndfile\")
 set (VERSION \"${LIB_VERSION}\")
 set (PACKAGE_VERSION \"${LIB_VERSION}\")
 
-set (BASEPATH "${CMAKE_SOURCE_DIR}")
+set (BASEPATH "${CMAKE_CURRENT_LIST_DIR}")
 
 include (CMake/build.cmake)
 include (CMake/external_libs.cmake)
@@ -128,8 +82,8 @@ find_external_xiph_libs (HAVE_EXTERNAL_XIPH_LIBS EXTERNAL_XIPH_CFLAGS EXTERNAL_X
 #-------------------------------------------------------------------------------
 # Project definitions follow.
 
-configure_file (${CMAKE_SOURCE_DIR}/src/sndfile.h.in ${CMAKE_SOURCE_DIR}/src/sndfile.h)
-configure_file (${CMAKE_SOURCE_DIR}/CMakeFiles/config.h.in ${CMAKE_SOURCE_DIR}/src/config.h)
+configure_file (${CMAKE_CURRENT_LIST_DIR}/src/sndfile.h.in ${CMAKE_CURRENT_LIST_DIR}/src/sndfile.h)
+configure_file (${CMAKE_CURRENT_LIST_DIR}/src/config.h.in ${CMAKE_CURRENT_LIST_DIR}/src/config.h)
 
 include_directories (src)
 
@@ -228,9 +182,12 @@ set (libsndfile_sources
         src/xi.c
 	)
 
-add_library (sndfile SHARED
+add_library (sndfile # SHARED # 저는 정적 링크 할겁니다.
 	${libsndfile_sources}
 	)
+
+# 다른 프로젝트에서 빌드타임에 가져다가 사용합니다.
+target_include_directories (sndfile PUBLIC src)
 
 target_link_libraries (sndfile LINK_PRIVATE ${EXTERNAL_XIPH_LIBS} LINK_PUBLIC m)
 
@@ -238,7 +195,7 @@ set_target_properties (sndfile
 	PROPERTIES
 	VERSION ${LIB_VERSION}
 	SOVERSION ${LIB_VERSION_MAJOR}
-	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/src
+	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src
 	)
 
 #-------------------------------------------------------------------------------
@@ -258,10 +215,10 @@ lsf_build_program_extra (sndfile-play asound)
 #-------------------------------------------------------------------------------
 # Tests.
 
-configure_file (${CMAKE_SOURCE_DIR}/tests/test_wrapper.sh.in ${CMAKE_SOURCE_DIR}/tests/test_wrapper.sh)
-configure_file (${CMAKE_SOURCE_DIR}/tests/pedantic-header-test.sh.in ${CMAKE_SOURCE_DIR}/tests/pedantic-header-test.sh)
+configure_file (${CMAKE_CURRENT_LIST_DIR}/tests/test_wrapper.sh.in ${CMAKE_CURRENT_LIST_DIR}/tests/test_wrapper.sh)
+configure_file (${CMAKE_CURRENT_LIST_DIR}/tests/pedantic-header-test.sh.in ${CMAKE_CURRENT_LIST_DIR}/tests/pedantic-header-test.sh)
 
-add_custom_target (check
+add_custom_target (libsndfile_check
 	COMMAND src/test_main && bash tests/test_wrapper.sh
 	DEPENDS src/test_main tests/test_wrapper.sh
 	)
