@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 11)
 add_subdirectory(lib/jansson)
 add_subdirectory(lib/libfec)
 add_subdirectory(lib/libsndfile)
+add_subdirectory(lib/portaudio)
 
 add_executable(quiet_practice main.c)
-target_link_libraries(quiet_practice jansson fec sndfile)
+target_link_libraries(quiet_practice jansson fec sndfile portaudio_static)
