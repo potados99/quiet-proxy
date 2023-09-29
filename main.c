@@ -3,7 +3,8 @@
 #include "fec.h"
 #include "sndfile.h"
 #include "portaudio.h"
-#include "liquid.h";
+#include "liquid.h"
+#include "quiet.h"
 
 int main() {
     printf("Hello, World!\n");
@@ -12,6 +13,7 @@ int main() {
     printf("libsndfile is %s\n", sf_version_string());
     printf("portaudio is %s\n", Pa_GetVersionText());
     printf("libliquid is %s\n", liquid_version);
+    printf("libquiet is %d\n", quiet_success);
 
     return 0;
 }

@@ -972,6 +972,9 @@ if (NOT LIQUID_BUILD_SHARED AND NOT LIQUID_BUILD_STATIC)
     message(FATAL_ERROR "Please, define LIQUID_BUILD_SHARED and/or LIQUID_BUILD_STATIC.")
 endif ()
 
+set(HAVE_FEC_H 1)
+set(HAVE_LIBFEC 1)
+
 if (LIQUID_BUILD_SHARED)
     add_library(liquid-shared SHARED ${liquid_SOURCES})
     if (HAVE_LIBM)
@@ -992,11 +995,10 @@ endif ()
 
 if (LIQUID_BUILD_STATIC)
     add_library(liquid-static STATIC ${liquid_SOURCES})
+    target_include_directories(liquid-static PUBLIC include)
+    target_link_libraries(liquid-static fec)
     if (HAVE_LIBM)
         target_link_libraries(liquid-static m)
-    endif ()
-    if (FEC_FOUND)
-        target_link_libraries(liquid-static fec)
     endif ()
     if (NOT LIQUID_FFTOVERRIDE AND FFTW3_FOUND)
         target_link_libraries(liquid-static fftw3f)
@@ -1009,12 +1011,6 @@ if (LIQUID_BUILD_STATIC)
     endif ()
     set(LIQUID_STATIC_LIBRARY liquid-static)
 endif ()
-
-set(HAVE_FEC_H 1)
-set(HAVE_LIBFEC 1)
-
-target_include_directories(liquid-static PUBLIC include)
-target_link_libraries(liquid-static fec)
 
 #
 # Build the autoscript tool, needed by autotest and benchmark.

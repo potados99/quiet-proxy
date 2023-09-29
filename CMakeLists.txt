@@ -8,6 +8,7 @@ add_subdirectory(lib/libfec)
 add_subdirectory(lib/libsndfile)
 add_subdirectory(lib/portaudio)
 add_subdirectory(lib/quiet-dsp)
+add_subdirectory(lib/libquiet)
 
 add_executable(quiet_practice main.c)
-target_link_libraries(quiet_practice jansson fec sndfile portaudio_static liquid-static)
+target_link_libraries(quiet_practice jansson fec sndfile portaudio_static liquid-static quiet_static)
