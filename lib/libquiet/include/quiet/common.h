@@ -8,7 +8,7 @@
 #include "quiet/error.h"
 #include "quiet/ring_common.h"
 
-#include "liquid.h"
+#include <liquid.h>
 
 typedef quiet_sample_t sample_t;
 typedef quiet_dc_filter_options dc_filter_options;

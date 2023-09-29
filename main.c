@@ -6,6 +6,9 @@
 #include "liquid.h"
 #include "quiet.h"
 
+#include "lwip/sockets.h"
+#include "quiet-lwip-portaudio.h"
+
 int main() {
     printf("Hello, World!\n");
     printf("Jansson is %s\n", jansson_version_str());
@@ -14,6 +17,7 @@ int main() {
     printf("portaudio is %s\n", Pa_GetVersionText());
     printf("libliquid is %s\n", liquid_version);
     printf("libquiet is %d\n", quiet_success);
+    printf("quiet-lwip is %d\n", socket(AF_INET, SOCK_STREAM, 0));
 
     return 0;
 }

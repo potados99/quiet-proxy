@@ -124,7 +124,7 @@ static err_t quiet_lwip_portaudio_init(struct netif *netif) {
 
     quiet_portaudio_decoder *d = quiet_portaudio_decoder_create(conf->decoder_opt,
             conf->decoder_device, conf->decoder_latency,
-            conf->decoder_sample_rate, conf->decoder_sample_size);
+            conf->decoder_sample_rate);
 
     portaudio_eth_driver *driver = calloc(1, sizeof(portaudio_eth_driver));
     driver->encoder = e;
