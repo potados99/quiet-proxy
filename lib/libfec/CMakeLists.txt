@@ -94,6 +94,10 @@ set_target_properties (fec PROPERTIES
     VERSION "3.0.0"
     SOVERSION 3)
 
+# 빌드 타임에 라이브러리로 사용할 것이므로,
+# fec.h 헤더가 들어 있는 현재 디렉토리를 include로 지정해 줍니다.
+target_include_directories(fec PUBLIC .)
+
 install (TARGETS fec
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib)
