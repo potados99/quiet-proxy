@@ -82,8 +82,10 @@ find_external_xiph_libs (HAVE_EXTERNAL_XIPH_LIBS EXTERNAL_XIPH_CFLAGS EXTERNAL_X
 #-------------------------------------------------------------------------------
 # Project definitions follow.
 
-configure_file (${CMAKE_CURRENT_LIST_DIR}/src/sndfile.h.in ${CMAKE_CURRENT_LIST_DIR}/src/sndfile.h)
-configure_file (${CMAKE_CURRENT_LIST_DIR}/src/config.h.in ${CMAKE_CURRENT_LIST_DIR}/src/config.h)
+# 설정 파일은 수동으로 처리했습니다.
+# 여기에서 추가로 더 하지 않습니다.
+# configure_file (${CMAKE_CURRENT_LIST_DIR}/src/sndfile.h.in ${CMAKE_CURRENT_LIST_DIR}/src/sndfile.h)
+# configure_file (${CMAKE_CURRENT_LIST_DIR}/src/config.h.in ${CMAKE_CURRENT_LIST_DIR}/src/config.h)
 
 include_directories (src)
 
