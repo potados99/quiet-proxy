@@ -1,65 +1,105 @@
-#include <stdio.h>
-#include "jansson.h"
-#include "fec.h"
-#include "sndfile.h"
-#include "portaudio.h"
-#include "liquid.h"
-#include "quiet.h"
+#include <unistd.h>
+#include <signal.h>
+
 #include "quiet-portaudio.h"
 
+#define QUIET_PROFILES_LOCATION "C:/Users/Administrator/source/repos/quiet-practice/lib/libquiet/quiet-profiles.json"
+#define QUIET_PROFILE "audible-fsk"
 
-#include "lwip/sockets.h"
-#include "quiet-lwip-portaudio.h"
+static quiet_portaudio_decoder *decoder = NULL;
+static void sig_handler(int signal) {
+    if (decoder) {
+        quiet_portaudio_decoder_close(decoder);
+    }
+}
 
-int main() {
-    printf("Hello, World!\n");
-    printf("Jansson is %s\n", jansson_version_str());
-    printf("libfec is %p\n", create_viterbi27(9));
-    printf("libsndfile is %s\n", sf_version_string());
-    printf("portaudio is %s\n", Pa_GetVersionText());
-    printf("libliquid is %s\n", liquid_version);
-    printf("libquiet is %d\n", quiet_success);
+void send() {
+    printf("Sending...\n");
 
-    // printf("quiet-lwip is %d\n", socket(AF_INET, SOCK_STREAM, 0));
+    quiet_encoder_options *opt = quiet_encoder_profile_filename(QUIET_PROFILES_LOCATION, QUIET_PROFILE);
+    if (!opt) {
+        printf("failed to read profile %s from %s\n", QUIET_PROFILE, QUIET_PROFILES_LOCATION);
+        exit(1);
+    }
 
-    
+    PaError err = Pa_Initialize();
+    if (err != paNoError) {
+        printf("failed to initialize port audio, %s\n", Pa_GetErrorText(err));
+        return;
+    }
 
-    /* start up PortAudio, which will interface quiet to the soundcard */
-    Pa_Initialize();
-    
-    /* get a profile and set up encoder options, which controls Quiet's modem */
-    quiet_encoder_options *encodeOpt = quiet_encoder_profile_filename("C:/Users/Administrator/source/repos/quiet-practice/lib/libquiet/quiet-profiles.json", "audible-fsk");
-
-    /* get some default options about device and soundcard setup from PortAudio */
     PaDeviceIndex device = Pa_GetDefaultOutputDevice();
+    if (device == paNoDevice) {
+        printf("failed to get output device.\n");
+        return;
+    }
 
     const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(device);
-    double sampleRate = deviceInfo->defaultSampleRate;
+    double sample_rate = deviceInfo->defaultSampleRate;
     PaTime latency = deviceInfo->defaultLowOutputLatency;
 
-    /* select a power of 2 sample buffer size to interface soundcard with
-     * this should be between 128 and 16384 */
-    const size_t sampleBufferSize = (1 << 14);
+    size_t sample_buffer_size = 16384;
+    quiet_portaudio_encoder *e = quiet_portaudio_encoder_create(opt, device, latency, sample_rate, sample_buffer_size);
 
-    /* start the quiet/PortAudio interface */
-    quiet_portaudio_encoder *encoder = quiet_portaudio_encoder_create(encodeOpt, device, latency, sampleRate, sampleBufferSize);
-
-    /* create our message in a uint8_t array */
     const uint8_t msg[] = "Hello, World!";
+    quiet_portaudio_encoder_send(e, msg, sizeof(msg));
 
-    /* send the message. this just writes to a send queue
-     * behind the scenes, quiet will encode and send as sound samples */
-    quiet_portaudio_encoder_send(encoder, msg, sizeof(msg));
-
-    /* stop the quiet/PortAudio interface */
-    quiet_portaudio_encoder_close(encoder);
-    quiet_portaudio_encoder_destroy(encoder);
-
-    /* free encoder options we created earlier */
-    free(encodeOpt);
-
-    /* shut down PortAudio */
+    quiet_portaudio_encoder_close(e);
+    quiet_portaudio_encoder_destroy(e);
+    free(opt);
     Pa_Terminate();
+}
+
+void receive() {
+    printf("Receiving...\n");
+
+    quiet_decoder_options *opt = quiet_decoder_profile_filename(QUIET_PROFILES_LOCATION, QUIET_PROFILE);
+    if (!opt) {
+        printf("failed to read profile %s from %s\n", QUIET_PROFILE, QUIET_PROFILES_LOCATION);
+        exit(1);
+    }
+
+    signal(SIGINT, sig_handler);
+    signal(SIGTERM, sig_handler);
+
+    PaError err = Pa_Initialize();
+    if (err != paNoError) {
+        printf("failed to initialize port audio, %s\n", Pa_GetErrorText(err));
+        return;
+    }
+
+    PaDeviceIndex device = Pa_GetDefaultInputDevice();
+    if (device == paNoDevice) {
+        printf("failed to get input device.\n");
+        return;
+    }
+
+    const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(device);
+    double sample_rate = deviceInfo->defaultSampleRate;
+    PaTime latency = deviceInfo->defaultLowInputLatency;
+
+    decoder = quiet_portaudio_decoder_create(opt, device, latency, sample_rate);
+    quiet_portaudio_decoder_set_blocking(decoder, 0, 0);
+
+    size_t write_buffer_size = 16384;
+    uint8_t *write_buffer = malloc(write_buffer_size*sizeof(uint8_t));
+
+    while (true) {
+        ssize_t read = quiet_portaudio_decoder_recv(decoder, write_buffer, write_buffer_size);
+        if (read <= 0) {
+            break;
+        }
+
+        printf("%s", write_buffer);
+    }
+
+    free(write_buffer);
+    quiet_portaudio_decoder_destroy(decoder);
+}
+
+int main() {
+    receive();
+    //send();
 
     return 0;
 }
