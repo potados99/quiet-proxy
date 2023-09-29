@@ -33,7 +33,7 @@
 #include "liquid.internal.h"
 
 struct symbolreader_s {
-    unsigned char * src;
+    const unsigned char * src;
     unsigned int src_len;    // in bits
     unsigned int src_index;  // in bits
 };
@@ -53,7 +53,6 @@ void symbolreader_reset(symbolreader          _r,
                         const unsigned char * _src,
                         unsigned int          _src_len)
 {
-    printf("symbolreader reset with src_len %d\n", _src_len);
     _r->src = _src;
     _r->src_len = _src_len;
     _r->src_index = 0;
@@ -115,7 +114,6 @@ void symbolwriter_reset(symbolwriter _w,
     }
 
 
-    printf("symbolwriter reset with dst_len %d\n", _len);
     _w->dst = (unsigned char *)realloc(_w->dst, n);
     memset(_w->dst, 0, n);
     _w->dst_len = _len;
@@ -266,7 +264,6 @@ void liquid_unpack_array(unsigned char * _src,
     // find base index
     unsigned int i0 = _k / 8;       // byte index
     unsigned int b0 = _k - 8*i0;    // bit index
-    //printf("base index : %2u, %2u\n", i0, b0);
 
     unsigned int out = 0;
 

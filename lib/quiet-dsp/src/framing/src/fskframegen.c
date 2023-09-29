@@ -13,13 +13,19 @@ unsigned int fskframegen_write_header(  fskframegen _q, liquid_float_complex * _
 unsigned int fskframegen_write_payload( fskframegen _q, liquid_float_complex * _y, unsigned int _len);
 void fskframegen_reconfigure(   fskframegen _q);
 void fskframegen_reconfigure_header(fskframegen _q);
+void fskframegen_reconfigure_preamble(fskframegen _q);
+
+static fskframepreambleprops_s fskframegenpreambleprops_default = {
+    0x000d,
+    3,
+    1,
+};
 
 static fskframegenprops_s fskframegenprops_default = {
     LIQUID_CRC_16,
     LIQUID_FEC_NONE,
     LIQUID_FEC_NONE,
     1,
-    2,
 };
 
 static fskframegenprops_s fskframegenprops_header_default = {
@@ -27,7 +33,6 @@ static fskframegenprops_s fskframegenprops_header_default = {
     FSKFRAME_H_FEC0,
     FSKFRAME_H_FEC1,
     FSKFRAME_H_BITS_PER_SYMBOL,
-    FSKFRAME_H_SAMPLES_PER_SYMBOL,
 };
 
 enum state {
@@ -40,13 +45,15 @@ enum state {
 // fskframe object structure
 struct fskframegen_s {
     float bandwidth;  // bandwidth for all fsk mods
+    unsigned int samples_per_symbol;  // samples per symbol for all fsk mods
 
     // preamble
-    msequence preamble_ms;      // preamble p/n sequence
-    fskmod    preamble_mod;
-    liquid_float_complex * preamble_samples;  // modulated preamble symbol [FSKFRAME_PRE_K]
-    unsigned int ramp_len;  // ramp up length
-    unsigned int preamble_len;  // length of preamble in samples
+    fskframepreambleprops_s preamble_props;
+    msequence               preamble_ms;      // preamble p/n sequence
+    fskmod                  preamble_mod;
+    liquid_float_complex *  preamble_samples;  // modulated preamble symbol [preamble_props.samples_per_symbol]
+    unsigned int            ramp_len;  // ramp up length
+    unsigned int            preamble_len;  // length of preamble in samples
 
     // header
     unsigned int           header_user_len;  // unencoded header user length
@@ -82,20 +89,23 @@ struct fskframegen_s {
 };
 
 fskframegen fskframegen_create(fskframegenprops_s * _props,
-                               float _bandwidth)
+                               float _bandwidth,
+                               unsigned int _samples_per_symbol)
 {
     fskframegen q = (fskframegen)calloc(1, sizeof(struct fskframegen_s));
     fskframegen_reset(q);
 
     q->bandwidth = _bandwidth;
+    q->samples_per_symbol = _samples_per_symbol;
 
     q->ramp_len = 12;
     q->tail_len = 12;
 
-    q->preamble_ms = msequence_create(3, 0x000d, 1);
-    q->preamble_mod = fskmod_create(1, FSKFRAME_PRE_K, q->bandwidth);
-    q->preamble_samples = (liquid_float_complex *)malloc(FSKFRAME_PRE_K * sizeof(liquid_float_complex));
-    q->preamble_len = 7 * FSKFRAME_PRE_K;
+    q->preamble_ms = NULL;
+    q->preamble_mod = NULL;
+    q->preamble_samples = NULL;
+
+    fskframegen_set_preamble_props(q, NULL);
 
     q->header_reader = symbolreader_create();
     q->header_mod = NULL;
@@ -157,6 +167,50 @@ int fskframegen_is_assembled(fskframegen _q)
     return _q->frame_assembled;
 }
 
+int fskframegen_set_preamble_props(fskframegen _q, fskframepreambleprops_s * _props)
+{
+    if (_q->frame_assembled) {
+        fprintf(stderr,
+                "warning: fskframegen_set_preamble_props(), frmae is already assembled; must "
+                "reset() first\n");
+        return -1;
+    }
+
+    if (_props == NULL) {
+        _props = &fskframegenpreambleprops_default;
+    }
+
+    if (_props->poly_len < 2 || _props->poly_len > 16) {
+        fprintf(stderr, "error: fskframegen_set_preamble_props(), invalid/unsupported poly length\n");
+        exit(1);
+    }
+
+    memmove(&_q->preamble_props, _props, sizeof(fskframepreambleprops_s));
+
+    fskframegen_reconfigure_preamble(_q);
+
+    return 0;
+
+}
+
+void fskframegen_reconfigure_preamble(fskframegen _q)
+{
+    fskmod_destroy(_q->preamble_mod);
+    _q->preamble_mod = fskmod_create(1,
+                                     _q->samples_per_symbol,
+                                     _q->bandwidth);
+
+    msequence_destroy(_q->preamble_ms);
+    _q->preamble_ms = msequence_create(_q->preamble_props.poly_len,
+                                       _q->preamble_props.poly,
+                                       _q->preamble_props.poly_seed);
+
+    _q->preamble_samples = (liquid_float_complex *)realloc(_q->preamble_samples,
+                                                           _q->samples_per_symbol * sizeof(liquid_float_complex));
+
+    _q->preamble_len = ((1 << _q->preamble_props.poly_len) - 1) * _q->samples_per_symbol;
+}
+
 void fskframegen_getprops(fskframegen _q, fskframegenprops_s * _props)
 {
     memmove(_props, &_q->payload_props, sizeof(fskframegenprops_s));
@@ -188,11 +242,6 @@ int fskframegen_setprops(fskframegen _q, fskframegenprops_s * _props)
 
     if (_props->bits_per_symbol < 1 || _props->bits_per_symbol > 8) {
         fprintf(stderr, "error: fskframegen_setprops(), invalid/unsupported bits per symbol\n");
-        exit(1);
-    }
-
-    if (_props->samples_per_symbol < (1 << _props->bits_per_symbol) || _props->samples_per_symbol > 2048) {
-        fprintf(stderr, "error: fskframegen_setprops(), invalid/unsupported samples per symbol\n");
         exit(1);
     }
 
@@ -249,11 +298,6 @@ int fskframegen_set_header_props(fskframegen _q, fskframegenprops_s * _props)
         exit(1);
     }
 
-    if (_props->samples_per_symbol < (1 << _props->bits_per_symbol) || _props->samples_per_symbol > 2048) {
-        fprintf(stderr, "error: fskframegen_set_header_props(), invalid/unsupported samples per symbol\n");
-        exit(1);
-    }
-
     memmove(&_q->header_props, _props, sizeof(fskframegenprops_s));
 
     fskframegen_reconfigure_header(_q);
@@ -275,7 +319,7 @@ void fskframegen_reconfigure(fskframegen _q)
 {
     fskmod_destroy(_q->payload_mod);
     _q->payload_mod = fskmod_create(_q->payload_props.bits_per_symbol,
-                                    _q->payload_props.samples_per_symbol,
+                                    _q->samples_per_symbol,
                                     _q->bandwidth);
 
     _q->payload_packetizer = packetizer_recreate(_q->payload_packetizer,
@@ -289,21 +333,20 @@ void fskframegen_reconfigure(fskframegen _q)
     symbolreader_reset(_q->payload_reader, _q->payload_enc, 8*_q->payload_enc_len);
 
     _q->payload_samples = (liquid_float_complex *)realloc(_q->payload_samples,
-                                                          _q->payload_props.samples_per_symbol * sizeof(liquid_float_complex));
+                                                          _q->samples_per_symbol * sizeof(liquid_float_complex));
 
     unsigned int num_payload_symbols = (8 * _q->payload_enc_len) / _q->payload_props.bits_per_symbol;
     if (_q->payload_enc_len % _q->payload_props.bits_per_symbol) {
         num_payload_symbols++;
     }
-    _q->payload_len = _q->payload_props.samples_per_symbol * num_payload_symbols;
-    printf("payload dec len %d enc len %d symbols %d\n", _q->payload_msg_len, _q->payload_enc_len, _q->payload_len);
+    _q->payload_len = _q->samples_per_symbol * num_payload_symbols;
 }
 
 void fskframegen_reconfigure_header(fskframegen _q)
 {
     fskmod_destroy(_q->header_mod);
     _q->header_mod = fskmod_create(_q->header_props.bits_per_symbol,
-                                   _q->header_props.samples_per_symbol,
+                                   _q->samples_per_symbol,
                                    _q->bandwidth);
 
     unsigned dec_len = FSKFRAME_H_DEC + _q->header_user_len;
@@ -318,14 +361,12 @@ void fskframegen_reconfigure_header(fskframegen _q)
     symbolreader_reset(_q->header_reader, _q->header_enc, 8*_q->header_enc_len);
 
     _q->header_samples = (liquid_float_complex *)realloc(_q->header_samples,
-                                                         _q->header_props.samples_per_symbol * sizeof(liquid_float_complex));
+                                                         _q->samples_per_symbol * sizeof(liquid_float_complex));
     unsigned int num_header_symbols = (8 * _q->header_enc_len) / _q->header_props.bits_per_symbol;
     if (_q->header_enc_len % _q->header_props.bits_per_symbol) {
         num_header_symbols++;
     }
-    _q->header_len = _q->header_props.samples_per_symbol * num_header_symbols;
-
-    printf("header dec len %d enc len %d symbols %d\n", dec_len, _q->header_enc_len, _q->header_len);
+    _q->header_len = _q->samples_per_symbol * num_header_symbols;
 }
 
 void fskframegen_assemble(fskframegen           _q,
@@ -352,18 +393,8 @@ void fskframegen_assemble(fskframegen           _q,
     _q->header_dec[n + 3] |= (_q->payload_props.fec0) & 0x1f;
     _q->header_dec[n + 4] = (_q->payload_props.bits_per_symbol & 0x07) << 5;
     _q->header_dec[n + 4] |= (_q->payload_props.fec1) & 0x1f;
-    _q->header_dec[n + 5] = (_q->payload_props.samples_per_symbol) & 0xff;
 
     packetizer_encode(_q->header_packetizer, _q->header_dec, _q->header_enc);
-
-    /*
-    printf("gen encoded:");
-    unsigned int i;
-    for (i = 0; i < _q->header_enc_len; i++) {
-        printf(" %02x", _q->header_enc[i]);
-    }
-    printf("\n");
-    */
 
     symbolreader_reset(_q->header_reader, _q->header_enc, 8*_q->header_enc_len);
     fskframegen_reconfigure(_q);
@@ -372,17 +403,6 @@ void fskframegen_assemble(fskframegen           _q,
 
     _q->frame_assembled = 1;
     _q->state = STATE_PREAMBLE;
-    /*
-    printf("frame assembled\n");
-    printf("bandwidth %.2f\n", _q->bandwidth);
-    printf("header bits/symbol %d\n", _q->header_props.bits_per_symbol);
-    printf("header samples/symbol %d\n", _q->header_props.samples_per_symbol);
-    printf("payload bits/symbol %d\n", _q->payload_props.bits_per_symbol);
-    printf("payload samples/symbol %d\n", _q->payload_props.samples_per_symbol);
-    printf("preamble length %d\n", _q->preamble_len);
-    printf("header length %d\n", _q->header_len);
-    printf("payload length %d\n", _q->payload_len);
-    */
 }
 
 int fskframegen_write_samples(fskframegen           _q,
@@ -394,7 +414,6 @@ int fskframegen_write_samples(fskframegen           _q,
         unsigned int written;
         switch (_q->state) {
         case STATE_NOT_ASSEMBLED:
-            printf("not assembled, dumping\n");
             written = _buffer_len - i;
             memset(_buffer, 0, written * sizeof(liquid_float_complex));
             break;
@@ -428,21 +447,13 @@ unsigned int fskframegen_write_preamble(fskframegen            _q,
         num_samples = _buffer_len;
     }
 
-    printf("writing preamble\n");
-
-    /*
-    printf("preamble_samples:");
-    */
     for (i = 0; i < num_samples; i++) {
-        if (_q->sample_counter % FSKFRAME_PRE_K == 0) {
+        if (_q->sample_counter % _q->samples_per_symbol == 0) {
             unsigned int symbol = msequence_advance(_q->preamble_ms);
             fskmod_modulate(_q->preamble_mod, symbol, _q->preamble_samples);
-            /*
-        printf(" %.4f %.4f %.4f %.4f", _q->preamble_samples[0], _q->preamble_samples[1], _q->preamble_samples[2], _q->preamble_samples[3]);
-        */
         }
 
-        _buffer[i] = _q->preamble_samples[_q->sample_counter % FSKFRAME_PRE_K];
+        _buffer[i] = _q->preamble_samples[_q->sample_counter % _q->samples_per_symbol];
 
         if (_q->sample_counter < _q->ramp_len) {
             _buffer[i] *= hamming(_q->sample_counter, 2*_q->ramp_len);
@@ -452,7 +463,6 @@ unsigned int fskframegen_write_preamble(fskframegen            _q,
     }
 
     if (_q->sample_counter == _q->preamble_len) {
-        // printf("\n");
         msequence_reset(_q->preamble_ms);
         _q->sample_counter = 0;
         _q->state = STATE_HEADER;
@@ -472,13 +482,13 @@ unsigned int fskframegen_write_header(fskframegen            _q,
     }
 
     for (i = 0; i < num_samples; i++) {
-        if (_q->sample_counter % _q->header_props.samples_per_symbol == 0) {
+        if (_q->sample_counter % _q->samples_per_symbol == 0) {
             unsigned int symbol;
             symbolreader_read(_q->header_reader, _q->header_props.bits_per_symbol, &symbol);
             fskmod_modulate(_q->header_mod, symbol, _q->header_samples);
         }
 
-        _buffer[i] = _q->header_samples[_q->sample_counter % _q->header_props.samples_per_symbol];
+        _buffer[i] = _q->header_samples[_q->sample_counter % _q->samples_per_symbol];
 
         _q->sample_counter++;
     }
@@ -502,13 +512,13 @@ unsigned int fskframegen_write_payload(fskframegen            _q,
     }
 
     for (i = 0; i < num_samples; i++) {
-        if (_q->sample_counter % _q->payload_props.samples_per_symbol == 0) {
+        if (_q->sample_counter % _q->samples_per_symbol == 0) {
             unsigned int symbol;
             symbolreader_read(_q->payload_reader, _q->payload_props.bits_per_symbol, &symbol);
             fskmod_modulate(_q->payload_mod, symbol, _q->payload_samples);
         }
 
-        _buffer[i] = _q->payload_samples[_q->sample_counter % _q->payload_props.samples_per_symbol];
+        _buffer[i] = _q->payload_samples[_q->sample_counter % _q->samples_per_symbol];
 
         if (_q->sample_counter >= _q->payload_len - _q->tail_len) {
             _buffer[i] *= hamming(_q->payload_len - _q->sample_counter, 2*_q->tail_len);

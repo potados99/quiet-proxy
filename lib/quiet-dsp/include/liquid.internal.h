@@ -1183,9 +1183,9 @@ void bpacketsync_reconfig(bpacketsync _q);
 //
 
 #define FSKFRAME_PROTOCOL             (107 + PACKETIZER_VERSION)
-#define FSKFRAME_PRE_K                (150)
+//#define FSKFRAME_PRE_K                (150)
 #define FSKFRAME_H_USER_DEFAULT       (8)
-#define FSKFRAME_H_DEC                (6)
+#define FSKFRAME_H_DEC                (5)
 #define FSKFRAME_H_CRC                (LIQUID_CRC_32)
 #define FSKFRAME_H_FEC0               (LIQUID_FEC_GOLAY2412)
 #define FSKFRAME_H_FEC1               (LIQUID_FEC_NONE)

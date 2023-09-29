@@ -1,6 +1,6 @@
 #ifndef QUIET_PORTAUDIO_H
 #define QUIET_PORTAUDIO_H
-#include "quiet.h"
+#include <quiet.h>
 #include <portaudio.h>
 
 // Sound encoder

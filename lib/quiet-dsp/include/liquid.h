@@ -4934,17 +4934,23 @@ void dsssframesync_debug_print(dsssframesync _q, const char * _filename);
 //
 
 typedef struct {
+    unsigned int poly;
+    unsigned int poly_len;
+    unsigned int poly_seed;
+} fskframepreambleprops_s;
+
+typedef struct {
     unsigned int check;
     unsigned int fec0;
     unsigned int fec1;
     unsigned int bits_per_symbol;
-    unsigned int samples_per_symbol;
 } fskframegenprops_s;
 
 typedef struct fskframegen_s * fskframegen;
 
 fskframegen fskframegen_create(fskframegenprops_s * _props,
-                               float _bandwidth);
+                               float _bandwidth,
+                               unsigned int _samples_per_symbol);
 void fskframegen_destroy(fskframegen _q);
 void fskframegen_reset(fskframegen _q);
 int fskframegen_is_assembled(fskframegen _q);
@@ -4953,6 +4959,8 @@ int fskframegen_setprops(fskframegen _q, fskframegenprops_s * _props);
 void fskframegen_set_header_len(fskframegen _q, unsigned int _len);
 int fskframegen_set_header_props(fskframegen          _q,
                                   fskframegenprops_s * _props);
+int fskframegen_set_preamble_props(fskframegen    _q,
+                                   fskframepreambleprops_s * _props);
 unsigned int fskframegen_getframelen(fskframegen _q);
 
 // assemble a frame from an array of data
@@ -4982,6 +4990,7 @@ void fskframesync_print(fskframesync _q);
 void fskframesync_reset(fskframesync _q);
 int fskframesync_is_frame_open(fskframesync _q);
 void fskframesync_set_bandwidth(fskframesync _q, float _bw);
+void fskframesync_set_samples_per_symbol(fskframesync _q, unsigned int _samples_per_symbol);
 void fskframesync_set_header_len(fskframesync _q,
                                   unsigned int  _len);
 void fskframesync_decode_header_soft(fskframesync _q,
@@ -4995,6 +5004,10 @@ void fskframesync_execute(fskframesync          _q,
                            unsigned int           _n);
 void             fskframesync_reset_framedatastats(fskframesync _q);
 framedatastats_s fskframesync_get_framedatastats  (fskframesync _q);
+void fskframesync_set_preamble_detection_threshold(fskframesync _q,
+                                                   float _thresh);
+int fskframesync_set_preamble_props(fskframesync          _q,
+                                    fskframepreambleprops_s * _props);
 
 void fskframesync_debug_enable(fskframesync _q);
 void fskframesync_debug_disable(fskframesync _q);

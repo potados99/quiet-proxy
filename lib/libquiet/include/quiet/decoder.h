@@ -19,6 +19,10 @@ typedef struct { flexframesync framesync; } modem_decoder;
 
 typedef struct { gmskframesync framesync; } gmsk_decoder;
 
+typedef struct { dsssframesync framesync; } dsss_decoder;
+
+typedef struct { fskframesync framesync; } fsk_decoder;
+
 enum { num_frames_stats = 8 };
 
 struct quiet_decoder {
@@ -27,6 +31,8 @@ struct quiet_decoder {
         ofdm_decoder ofdm;
         modem_decoder modem;
         gmsk_decoder gmsk;
+        dsss_decoder dsss;
+        fsk_decoder fsk;
     } frame;
     demodulator *demod;
     float complex *symbolbuf;

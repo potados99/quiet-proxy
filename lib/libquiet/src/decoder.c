@@ -194,9 +194,9 @@ static void decoder_modem_create(const decoder_options *opt, decoder *d) {
     flexframesync_decode_payload_soft(modem.framesync, 1);
     if (opt->header_override_defaults) {
         flexframegenprops_s header_props = {
-            .check = opt->header_checksum_scheme,
-            .fec0 = opt->header_inner_fec_scheme,
-            .fec1 = opt->header_outer_fec_scheme,
+            .check = (crc_scheme)opt->header_checksum_scheme,
+            .fec0 = (fec_scheme)opt->header_inner_fec_scheme,
+            .fec1 = (fec_scheme)opt->header_outer_fec_scheme,
             .mod_scheme = opt->header_mod_scheme,
         };
         flexframesync_set_header_props(modem.framesync, &header_props);
@@ -226,6 +226,71 @@ static void decoder_gmsk_create(const decoder_options *opt, decoder *d) {
     d->frame.gmsk = gmsk;
 }
 
+static void decoder_dsss_create(const decoder_options *opt, decoder *d) {
+    dsss_decoder dsss;
+
+    dsss.framesync = dsssframesync_create(decoder_on_decode, d);
+    dsssframesync_set_header_len(dsss.framesync, 0);
+    if (opt->is_debug) {
+        dsssframesync_debug_enable(dsss.framesync);
+    }
+    dsssframesync_decode_header_soft(dsss.framesync, 1);
+    dsssframesync_decode_payload_soft(dsss.framesync, 1);
+    if (opt->header_override_defaults) {
+        dsssframegenprops_s header_props = {
+            .check = opt->header_checksum_scheme,
+            .fec0 = opt->header_inner_fec_scheme,
+            .fec1 = opt->header_outer_fec_scheme,
+        };
+        dsssframesync_set_header_props(dsss.framesync, &header_props);
+    }
+
+    size_t symbolbuf_len = 256;
+    d->symbolbuf = malloc(symbolbuf_len * sizeof(float complex));
+    d->symbolbuf_len = symbolbuf_len;
+
+    d->frame.dsss = dsss;
+}
+
+static void decoder_fsk_create(const decoder_options *opt, decoder *d) {
+    fsk_decoder fsk;
+
+    fsk.framesync = fskframesync_create(decoder_on_decode, d);
+    fskframesync_set_bandwidth(fsk.framesync, opt->fskopt.bandwidth);
+    fskframesync_set_samples_per_symbol(fsk.framesync, opt->fskopt.samples_per_symbol);
+    fskframesync_set_header_len(fsk.framesync, 0);
+    if (opt->is_debug) {
+        fskframesync_debug_enable(fsk.framesync);
+    }
+    if (opt->header_override_defaults) {
+        fskframegenprops_s header_props = {
+            .check = (crc_scheme)opt->header_checksum_scheme,
+            .fec0 = (fec_scheme)opt->header_inner_fec_scheme,
+            .fec1 = (fec_scheme)opt->header_outer_fec_scheme,
+            .bits_per_symbol = fskmod2bits(opt->header_mod_scheme),
+        };
+        fskframesync_set_header_props(fsk.framesync, &header_props);
+    }
+    if (opt->preamble_override_defaults) {
+        fskframepreambleprops_s preamble_props = {
+            .poly = opt->preamble_polynomial,
+            .poly_len = opt->preamble_polynomial_length,
+            .poly_seed = opt->preamble_polynomial_seed,
+        };
+        fskframesync_set_preamble_props(fsk.framesync, &preamble_props);
+    }
+
+    if (opt->preamble_detection_threshold) {
+        fskframesync_set_preamble_detection_threshold(fsk.framesync, opt->preamble_detection_threshold);
+    }
+
+    size_t symbolbuf_len = 256;
+    d->symbolbuf = malloc(symbolbuf_len * sizeof(float complex));
+    d->symbolbuf_len = symbolbuf_len;
+
+    d->frame.fsk = fsk;
+}
+
 decoder *quiet_decoder_create(const decoder_options *opt, float sample_rate) {
     decoder *d = malloc(sizeof(decoder));
 
@@ -240,6 +305,12 @@ decoder *quiet_decoder_create(const decoder_options *opt, float sample_rate) {
         break;
     case gmsk_encoding:
         decoder_gmsk_create(opt, d);
+        break;
+    case dsss_encoding:
+        decoder_dsss_create(opt, d);
+        break;
+    case fsk_encoding:
+        decoder_fsk_create(opt, d);
         break;
     }
 
@@ -592,6 +663,26 @@ ssize_t quiet_decoder_consume(decoder *d, const sample_t *samplebuf, size_t samp
             }
 
             break;
+        case dsss_encoding:
+            dsssframesync_execute(d->frame.dsss.framesync, d->symbolbuf, symbol_len);
+            if (d->opt.is_debug) {
+                char fname[50];
+                sprintf(fname, "framesync_%u.out", d->i);
+                dsssframesync_debug_print(d->frame.dsss.framesync, fname);
+                d->i++;
+            }
+
+            break;
+        case fsk_encoding:
+            fskframesync_execute(d->frame.fsk.framesync, d->symbolbuf, symbol_len);
+            if (d->opt.is_debug) {
+                char fname[50];
+                sprintf(fname, "framesync_%u.out", d->i);
+                fskframesync_debug_print(d->frame.fsk.framesync, fname);
+                d->i++;
+            }
+
+            break;
         }
     }
 
@@ -609,6 +700,11 @@ bool quiet_decoder_frame_in_progress(decoder *d) {
     case gmsk_encoding:
         return gmskframesync_is_frame_open(d->frame.gmsk.framesync);
         break;
+    case dsss_encoding:
+        return dsssframesync_is_frame_open(d->frame.dsss.framesync);
+        break;
+    case fsk_encoding:
+        return fskframesync_is_frame_open(d->frame.fsk.framesync);
     }
 }
 
@@ -680,6 +776,12 @@ void quiet_decoder_flush(decoder *d) {
         gmskframesync_execute(d->frame.gmsk.framesync, d->symbolbuf,
                               symbol_len);
         break;
+    case dsss_encoding:
+        dsssframesync_execute(d->frame.dsss.framesync, d->symbolbuf, symbol_len);
+        break;
+    case fsk_encoding:
+        fskframesync_execute(d->frame.fsk.framesync, d->symbolbuf, symbol_len);
+        break;
     }
 }
 
@@ -709,6 +811,12 @@ void quiet_decoder_destroy(decoder *d) {
         break;
     case gmsk_encoding:
         gmskframesync_destroy(d->frame.gmsk.framesync);
+        break;
+    case dsss_encoding:
+        dsssframesync_destroy(d->frame.dsss.framesync);
+        break;
+    case fsk_encoding:
+        fskframesync_destroy(d->frame.fsk.framesync);
         break;
     }
     if (d->resampler) {

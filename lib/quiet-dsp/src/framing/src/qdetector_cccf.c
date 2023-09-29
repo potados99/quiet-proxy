@@ -106,7 +106,6 @@ qdetector_cccf qdetector_cccf_create(liquid_float_complex * _s,
 
     // prepare transforms
     q->nfft       = 1 << liquid_nextpow2( (unsigned int)( 2 * q->s_len ) ); // NOTE: must be even
-    // printf("nfft: %d s_len: %d\n", q->nfft, q->s_len);
     q->buf_time_0 = (liquid_float_complex*) malloc(q->nfft * sizeof(liquid_float_complex));
     q->buf_freq_0 = (liquid_float_complex*) malloc(q->nfft * sizeof(liquid_float_complex));
     q->buf_freq_1 = (liquid_float_complex*) malloc(q->nfft * sizeof(liquid_float_complex));
@@ -183,10 +182,6 @@ qdetector_cccf qdetector_cccf_create_linear(liquid_float_complex * _sequence,
     for (i=0; i<_sequence_len + 2*_m; i++)
         firinterp_crcf_execute(interp, i < _sequence_len ? _sequence[i] : 0, &s[_k*i]);
     firinterp_crcf_destroy(interp);
-
-    for (i = 0; i < _sequence_len; i++) {
-        // printf("% .2f, % .2fi\n", crealf(_sequence[i]), cimagf(_sequence[i]));
-    }
 
     // create main object
     qdetector_cccf q = qdetector_cccf_create(s, s_len);
@@ -278,7 +273,6 @@ void qdetector_cccf_print(qdetector_cccf _q)
 
 void qdetector_cccf_reset(qdetector_cccf _q)
 {
-    printf("qdetector reset\n");
     _q->counter        = _q->nfft / 2;
     _q->x2_sum_0       = 0.0f;
     _q->x2_sum_1       = 0.0f;
@@ -341,7 +335,6 @@ void qdetector_cccf_set_range(qdetector_cccf _q,
     // set internal search range
     _q->range = (int)(_dphi_max * _q->nfft / (2*M_PI));
     _q->range = _q->range < 0 ? 0 : _q->range;
-    //printf("range: %d / %u\n", _q->range, _q->nfft);
 }
 
 // get sequence length
@@ -409,15 +402,7 @@ void qdetector_cccf_execute_seek(qdetector_cccf _q,
 
     if (_q->counter < _q->nfft)
         return;
-    
 
-    /*
-    printf("qdetector buf 0:");
-    for (unsigned int i = 0; i <_q->nfft/2; i++) {
-        printf(" %.2f + %.2fi,", crealf(_q->buf_time_0[i + _q->nfft/2]), cimagf(_q->buf_time_0[i + _q->nfft/2]));
-    }
-    printf("\n");
-    */
     // reset counter (last half of time buffer)
     _q->counter = _q->nfft/2;
 
@@ -509,7 +494,6 @@ void qdetector_cccf_execute_seek(qdetector_cccf _q,
         if (rxy_peak > _q->threshold && rxy_offset == offset) {
             i = rxy_index;
             unsigned int n = _q->nfft;
-            printf("qdetector %.3f %.3f %.3f %.3f %.3f [%.3f] %.3f %.3f\n", cabsf(_q->buf_time_1[(i + n - 5) % n]), cabsf(_q->buf_time_1[(i + n - 4) % n]), cabsf(_q->buf_time_1[(i + n - 3) %n]), cabsf(_q->buf_time_1[(i + n - 2) % n]), cabsf(_q->buf_time_1[(i + n - 1) % n]), cabsf(_q->buf_time_1[i]), cabsf(_q->buf_time_1[(i + 1) % n]), cabsf(_q->buf_time_1[(i + 2) % n]));
         }
     }
 
@@ -560,8 +544,6 @@ void qdetector_cccf_execute_align(qdetector_cccf _q,
 
     if (_q->counter < _q->nfft)
         return;
-
-    //printf("signal is aligned!\n");
 
     // estimate timing offset
     fft_execute(_q->fft);

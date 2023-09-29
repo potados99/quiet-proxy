@@ -139,6 +139,10 @@ msequence msequence_create_default(unsigned int _m)
 // destroy an msequence object, freeing all internal memory
 void msequence_destroy(msequence _ms)
 {
+    if (!_ms) {
+        return;
+    }
+
     free(_ms);
 }
 

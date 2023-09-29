@@ -1,5 +1,5 @@
 #include "quiet/common.h"
-#include "jansson.h"
+#include <jansson.h>
 
 encoder_options *encoder_profile(json_t *root, const char *profilename) {
     json_t *profile = json_object_get(root, profilename);
@@ -31,6 +31,11 @@ encoder_options *encoder_profile(json_t *root, const char *profilename) {
         const char *scheme = json_string_value(v);
         if (strcmp(scheme, "gmsk") == 0) {
             opt->encoding = gmsk_encoding;
+        } else if (strcmp(scheme, "dsss") == 0) {
+            opt->encoding = dsss_encoding;
+        } else if (strncmp(scheme, "fsk", strlen("fsk")) == 0) {
+            opt->encoding = fsk_encoding;
+            opt->mod_scheme = getopt_str2fskmod(scheme);
         } else {
             opt->encoding = modem_encoding; // this will be overriden later if ofdm
             opt->mod_scheme = (quiet_modulation_scheme_t)liquid_getopt_str2mod(scheme);
@@ -53,14 +58,31 @@ encoder_options *encoder_profile(json_t *root, const char *profilename) {
         }
         if ((vv = json_object_get(v, "mod_scheme"))) {
             const char *scheme = json_string_value(vv);
-            opt->header_mod_scheme = (quiet_modulation_scheme_t)liquid_getopt_str2mod(scheme);
+            if (opt->encoding == fsk_encoding) {
+                opt->header_mod_scheme = getopt_str2fskmod(scheme);
+            } else {
+                opt->header_mod_scheme = (quiet_modulation_scheme_t)liquid_getopt_str2mod(scheme);
+            }
+        }
+    }
+    if ((v = json_object_get(profile, "preamble"))) {
+        json_t *vv;
+        opt->preamble_override_defaults = true;
+        if ((vv = json_object_get(v, "polynomial"))) {
+            opt->preamble_polynomial = strtol(json_string_value(vv), NULL, 0);
+        }
+        if ((vv = json_object_get(v, "polynomial_length"))) {
+            opt->preamble_polynomial_length = json_integer_value(vv);
+        }
+        if ((vv = json_object_get(v, "polynomial_seed"))) {
+            opt->preamble_polynomial_seed = json_integer_value(vv);
         }
     }
     if ((v = json_object_get(profile, "frame_length"))) {
         opt->frame_len = json_integer_value(v);
     }
     if ((v = json_object_get(profile, "ofdm"))) {
-        if (opt->encoding == gmsk_encoding) {
+        if (opt->encoding == gmsk_encoding || opt->encoding == dsss_encoding || opt->encoding == fsk_encoding) {
             free(opt);
             quiet_set_last_error(quiet_profile_invalid_profile);
             return NULL;
@@ -81,6 +103,20 @@ encoder_options *encoder_profile(json_t *root, const char *profilename) {
         }
         if ((vv = json_object_get(v, "right_band"))) {
             opt->ofdmopt.right_band = json_integer_value(vv);
+        }
+    }
+    if ((v = json_object_get(profile, "fsk"))) {
+        json_t *vv;
+        if (opt->encoding != fsk_encoding) {
+            free(opt);
+            quiet_set_last_error(quiet_profile_invalid_profile);
+            return NULL;
+        }
+        if ((vv = json_object_get(v, "samples_per_symbol"))) {
+            opt->fskopt.samples_per_symbol = json_integer_value(vv);
+        }
+        if ((vv = json_object_get(v, "bandwidth"))) {
+            opt->fskopt.bandwidth = json_number_value(vv);
         }
     }
     if ((v = json_object_get(profile, "modulation"))) {
@@ -210,6 +246,10 @@ decoder_options *decoder_profile(json_t *root, const char *profilename) {
         const char *scheme = json_string_value(v);
         if (strcmp(scheme, "gmsk") == 0) {
             opt->encoding = gmsk_encoding;
+        } else if (strcmp(scheme, "dsss") == 0) {
+            opt->encoding = dsss_encoding;
+        } else if (strncmp(scheme, "fsk", strlen("fsk")) == 0) {
+            opt->encoding = fsk_encoding;
         } else {
             opt->encoding = modem_encoding; // this will be overriden later if ofdm
         }
@@ -231,11 +271,28 @@ decoder_options *decoder_profile(json_t *root, const char *profilename) {
         }
         if ((vv = json_object_get(v, "mod_scheme"))) {
             const char *scheme = json_string_value(vv);
-            opt->header_mod_scheme = (quiet_modulation_scheme_t)liquid_getopt_str2mod(scheme);
+            if (opt->encoding == fsk_encoding) {
+                opt->header_mod_scheme = getopt_str2fskmod(scheme);
+            } else {
+                opt->header_mod_scheme = (quiet_modulation_scheme_t)liquid_getopt_str2mod(scheme);
+            }
+        }
+    }
+    if ((v = json_object_get(profile, "preamble"))) {
+        json_t *vv;
+        opt->preamble_override_defaults = true;
+        if ((vv = json_object_get(v, "polynomial"))) {
+            opt->preamble_polynomial = strtol(json_string_value(vv), NULL, 0);
+        }
+        if ((vv = json_object_get(v, "polynomial_length"))) {
+            opt->preamble_polynomial_length = json_integer_value(vv);
+        }
+        if ((vv = json_object_get(v, "polynomial_seed"))) {
+            opt->preamble_polynomial_seed = json_integer_value(vv);
         }
     }
     if ((v = json_object_get(profile, "ofdm"))) {
-        if (opt->encoding == gmsk_encoding) {
+        if (opt->encoding == gmsk_encoding || opt->encoding == dsss_encoding || opt->encoding == fsk_encoding) {
             free(opt);
             quiet_set_last_error(quiet_profile_invalid_profile);
             return NULL;
@@ -256,6 +313,20 @@ decoder_options *decoder_profile(json_t *root, const char *profilename) {
         }
         if ((vv = json_object_get(v, "right_band"))) {
             opt->ofdmopt.right_band = json_integer_value(vv);
+        }
+    }
+    if ((v = json_object_get(profile, "fsk"))) {
+        json_t *vv;
+        if (opt->encoding != fsk_encoding) {
+            free(opt);
+            quiet_set_last_error(quiet_profile_invalid_profile);
+            return NULL;
+        }
+        if ((vv = json_object_get(v, "samples_per_symbol"))) {
+            opt->fskopt.samples_per_symbol = json_integer_value(vv);
+        }
+        if ((vv = json_object_get(v, "bandwidth"))) {
+            opt->fskopt.bandwidth = json_number_value(vv);
         }
     }
     if ((v = json_object_get(profile, "modulation"))) {
@@ -285,8 +356,11 @@ decoder_options *decoder_profile(json_t *root, const char *profilename) {
         if ((vv = json_object_get(v, "excess_bandwidth"))) {
             opt->demodopt.excess_bw = json_number_value(vv);
         }
-    } else { 
+    } else {
         opt->demodopt.samples_per_symbol = 1;
+    }
+    if ((v = json_object_get(profile, "detection_threshold"))) {
+        opt->preamble_detection_threshold = json_number_value(v);
     }
     if ((v = json_object_get(profile, "resampler"))) {
         json_t *vv;
