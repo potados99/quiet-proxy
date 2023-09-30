@@ -13,3 +13,10 @@ add_subdirectory(lib/quiet-lwip)
 
 add_executable(quiet_practice main.c)
 target_link_libraries(quiet_practice jansson fec sndfile portaudio_static liquid-static quiet_static quiet_lwip)
+
+add_executable(my_kv_client examples/kv_client.c)
+target_link_libraries(my_kv_client quiet_lwip)
+
+add_executable(my_kv_server examples/kv_server.c)
+target_link_libraries(my_kv_server quiet_lwip)
+
