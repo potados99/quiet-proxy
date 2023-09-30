@@ -20,3 +20,8 @@ target_link_libraries(my_kv_client quiet_lwip)
 add_executable(my_kv_server examples/kv_server.c)
 target_link_libraries(my_kv_server quiet_lwip)
 
+add_executable(my_send examples/send.c)
+target_link_libraries(my_send quiet_lwip)
+
+add_executable(my_receive examples/receive.c)
+target_link_libraries(my_receive quiet_lwip)
