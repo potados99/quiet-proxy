@@ -270,9 +270,10 @@ quiet_lwip_portaudio_audio_threads *quiet_lwip_portaudio_start_audio_threads(qui
     atomic_init(&threads->recv_args.shutdown, false);
     threads->recv_thread = start_recv_thread(&threads->recv_args);
 
-    threads->emit_args.interface = interface;
-    atomic_init(&threads->emit_args.shutdown, false);
-    threads->emit_thread = start_emit_thread(&threads->emit_args);
+    // 보내는것도 콜백이 알아서 물어가줌! 스레드 필요없음!
+    //threads->emit_args.interface = interface;
+    //atomic_init(&threads->emit_args.shutdown, false);
+    //threads->emit_thread = start_emit_thread(&threads->emit_args);
 
     return threads;
 }
