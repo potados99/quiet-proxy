@@ -78,7 +78,10 @@ get_monotonic_time(struct timespec *ts)
   ts->tv_sec = sec;
   ts->tv_nsec = nano;
 #else
-  clock_gettime(CLOCK_MONOTONIC, ts);
+  // CLOCK_MONOTONIC 으로 cond 초기화도 해놓았건만,
+  // 여기서 CLOCK_REALTIME으로 가져와야만 우리가 원하는 것이 나옵니다...
+  // 아, Windows 환경입니다. libwinpthread-1.dll 쓰는..
+  clock_gettime(CLOCK_REALTIME, ts);
 #endif
 }
 
