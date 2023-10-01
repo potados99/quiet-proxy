@@ -7,6 +7,8 @@
 #include <pthread.h>
 #include <error.h>
 
+#define close closesocket
+
 char *local_address;
 int local_port;
 
@@ -57,7 +59,7 @@ int open_send_socket(const char *address, unsigned short port) {
 
     int res = connect(socket_fd, (struct sockaddr *) &remote, sizeof(remote));
     if (res < 0) {
-        printf("connect failed\n");
+        printf("Connect failed\n");
     }
 
     return socket_fd;
@@ -65,7 +67,7 @@ int open_send_socket(const char *address, unsigned short port) {
 
 void *handler_loop() {
     while (1) {
-        if (active_socket <= 0) {
+        if (!active_socket) {
             // puts("No active socket!");
             continue;
         }
@@ -74,7 +76,10 @@ void *handler_loop() {
 
         int bytes_received = recv(active_socket, buffer, 32, 0);
         if (bytes_received < 0) {
-            printf("recv failed\n");
+            printf("Receive failed. Stop receiving\n");
+            close(active_socket);
+            active_socket = 0;
+            return NULL;
         }
 
         printf("%s", buffer);
@@ -108,14 +113,24 @@ void *listen_loop() {
     }
 
     while (1) {
+        if (active_socket) {
+            continue;
+        }
+
         struct sockaddr_in receive_from;
         int receive_from_len = sizeof(receive_from);
 
         int client_socket = accept(receive_socket, (struct sockaddr *)&receive_from, &receive_from_len);
         if (client_socket < 0) {
-            printf("accept failed: %d\n", client_socket);
+            printf("Accept failed: %d\n", client_socket);
             continue;
         }
+        if (active_socket) {
+            printf("Ignore incoming connection due to existing active socket\n");
+            close(client_socket);
+            continue;
+        }
+
         active_socket = client_socket;
 
         printf("New connection from: %s:%d\n", inet_ntoa(receive_from.sin_addr), ntohs(receive_from.sin_port));
@@ -157,12 +172,12 @@ int main(int argc, char **argv) {
         char buf[64];
         scanf("%s", buf);
 
-        if (active_socket <= 0) {
+        if (active_socket) {
+            puts("Sending using active socket!");
+        } else {
             puts("Opening new socket!");
             active_socket = open_send_socket(remote_address, remote_port);
             start_handler_thread(); // 연결된 소켓에서 듣는 스레드
-        } else {
-            puts("Sending using active socket!");
         }
 
         send(active_socket, buf, strlen(buf), 0);
