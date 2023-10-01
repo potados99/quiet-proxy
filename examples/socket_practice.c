@@ -7,7 +7,12 @@
 #include <pthread.h>
 #include <error.h>
 
+#define USE_WINSOCK
+
+#ifdef USE_WINSOCK
 #define close closesocket
+#define read(s, buf, len) recv(s, buf, len, 0)
+#endif
 
 char *local_address;
 int local_port;
@@ -74,7 +79,7 @@ void *handler_loop() {
 
         char buffer[32];
 
-        int bytes_received = recv(active_socket, buffer, 32, 0);
+        int bytes_received = read(active_socket, buffer, 32);
         if (bytes_received < 0) {
             printf("Receive failed. Stop receiving\n");
             close(active_socket);
@@ -82,7 +87,8 @@ void *handler_loop() {
             return NULL;
         }
 
-        printf("%s", buffer);
+        buffer[bytes_received] = 0;
+        printf("%s\n", buffer);
     }
 }
 
@@ -99,13 +105,14 @@ pthread_t start_handler_thread() {
 }
 
 void *listen_loop() {
+#ifdef USE_WINSOCK
     WSADATA WSAData;
     int error = WSAStartup(MAKEWORD(2, 2), &WSAData);
-    if (error)
-    {
+    if (error) {
         printf("Error - Can not load 'winsock.dll' file\n");
         return NULL;
     }
+#endif
 
     int receive_socket = open_receive_socket(local_address, local_port);
     if (receive_socket < 0) {
@@ -120,7 +127,7 @@ void *listen_loop() {
         struct sockaddr_in receive_from;
         int receive_from_len = sizeof(receive_from);
 
-        int client_socket = accept(receive_socket, (struct sockaddr *)&receive_from, &receive_from_len);
+        int client_socket = accept(receive_socket, (struct sockaddr *) &receive_from, &receive_from_len);
         if (client_socket < 0) {
             printf("Accept failed: %d\n", client_socket);
             continue;
