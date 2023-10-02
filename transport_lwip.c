@@ -116,3 +116,29 @@ int setup_transport_layer(const char *local_address) {
 
     return 0;
 }
+
+int set_keepalive(int socket_fd, int idle, int interval, int count) {
+    int keepalive = 1;
+
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)) < 0) {
+        perror("Failed to set SO_KEEPALIVE");
+        return -1;
+    }
+
+    if (setsockopt(socket_fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) < 0) {
+        perror("Failed to set TCP_KEEPIDLE");
+        return -1;
+    }
+
+    if (setsockopt(socket_fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) < 0) {
+        perror("Failed to set TCP_KEEPINTVL");
+        return -1;
+    }
+
+    if (setsockopt(socket_fd, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)) < 0) {
+        perror("Failed to set TCP_KEEPCNT");
+        return -1;
+    }
+
+    return 0;
+}

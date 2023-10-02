@@ -12,7 +12,7 @@ int local_port;
 char *remote_address;
 int remote_port;
 
-int active_socket;
+volatile int active_socket;
 
 /**
  * 주소와 포트를 받아서 수신용 소켓을 엽니다.
@@ -73,6 +73,10 @@ int open_send_socket(const char *address, unsigned short port) {
         printf("Connect failed\n");
     }
 
+    if (set_keepalive(socket_fd, 1, 1, 3) < 0) {
+        printf("[Failed to set keepalive. But keep going]\n");
+    }
+
     return socket_fd;
 }
 
@@ -91,11 +95,16 @@ void *handler_loop() {
         char buffer[32];
 
         int bytes_received = read(active_socket, buffer, 32);
-        if (bytes_received < 0) {
-            printf("[Receive failed. Stop receiving]\n");
+        if (bytes_received == 0) {
+            printf("[Receive failed. Connection is closed]\n");
             close(active_socket);
             active_socket = 0;
-            return NULL;
+            continue;
+        } else if (bytes_received == -1) {
+            printf("[Receive failed. Connection is aborted]\n");
+            close(active_socket);
+            active_socket = 0;
+            continue;
         }
 
         printf("[Received %d bytes]\n", bytes_received);
@@ -147,16 +156,20 @@ void *listen_loop() {
             printf("Accept failed: %d\n", client_socket);
             continue;
         }
+
         if (active_socket) {
             printf("[Ignore incoming connection due to existing active socket]\n");
             close(client_socket);
             continue;
         }
 
+        if (set_keepalive(client_socket, 1, 1, 3) < 0) {
+            printf("[Failed to set keepalive. But keep going]\n");
+        }
+
         printf("[New connection from: %s:%d]\n", inet_ntoa(receive_from.sin_addr), ntohs(receive_from.sin_port));
 
         active_socket = client_socket;
-        start_handler_thread(); // 연결된 소켓에서 듣는 스레드
     }
 }
 
@@ -208,22 +221,40 @@ int main(int argc, char **argv) {
         return -2;
     }
 
-    start_listen_thread(); // 연결을 기다리는 스레드
+    // 연결을 기다리는 스레드
+    start_listen_thread();
 
+    // 연결된 소켓에서 듣는 스레드
+    start_handler_thread();
+
+    // stdin 읽기 루프
     while (1) {
         char buf[64];
         scanf("%s", buf);
+
+        if (strcmp(buf, "q") == 0) {
+            break;
+        }
 
         if (active_socket) {
             printf("[Sending %d bytes using existing socket]\n", strlen(buf));
         } else {
             printf("[Sending %d bytes using new socket]\n", strlen(buf));
             active_socket = open_send_socket(remote_address, remote_port);
-            start_handler_thread(); // 연결된 소켓에서 듣는 스레드
         }
 
-        send(active_socket, buf, strlen(buf), 0);
+        int write_len = write(active_socket, buf, strlen(buf));
+        if (write_len < 0) {
+            printf("[Write failed. Close connection]\n");
+            close(active_socket);
+            active_socket = 0;
+            continue;
+        }
+
+        printf("[Wrote %d bytes]\n", write_len);
     }
+
+    close(active_socket);
 
     return 0;
 }

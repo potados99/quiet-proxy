@@ -40,7 +40,7 @@
 
 /*
  * Include user defined options first. Anything not defined in these files
- * will be set to standard values. Override anything you dont like!
+ * will be set to standard values. Override anything you don't like!
  */
 #include "lwipopts.h"
 #include "lwip/debug.h"
@@ -1449,7 +1449,7 @@
  * in seconds. (does not require sockets.c, and will affect tcp.c)
  */
 #ifndef LWIP_TCP_KEEPALIVE
-#define LWIP_TCP_KEEPALIVE              0
+#define LWIP_TCP_KEEPALIVE              1
 #endif
 
 /**
