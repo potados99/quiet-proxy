@@ -22,7 +22,7 @@ volatile int active_socket;
  * @return
  */
 int open_receive_socket(const char *address, unsigned short port) {
-    int socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_fd < 0) {
         printf("Socket failed\n");
         return -1;
@@ -33,14 +33,14 @@ int open_receive_socket(const char *address, unsigned short port) {
     local_addr->sin_addr.s_addr = inet_addr(address);
     local_addr->sin_port = htons(port);
 
-    int res = bind(socket_fd, (struct sockaddr *) local_addr, sizeof(struct sockaddr_in));
+    int res = lwip_bind(socket_fd, (struct sockaddr *) local_addr, sizeof(struct sockaddr_in));
     free(local_addr);
     if (res < 0) {
         printf("bind failed\n");
         return -1;
     }
 
-    res = listen(socket_fd, 1);
+    res = lwip_listen(socket_fd, 1);
     if (res < 0) {
         printf("listen failed\n");
         return -1;
@@ -57,7 +57,7 @@ int open_receive_socket(const char *address, unsigned short port) {
  * @return
  */
 int open_send_socket(const char *address, unsigned short port) {
-    int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd < 0) {
         printf("Socket failed\n");
         return -1;
@@ -68,7 +68,7 @@ int open_send_socket(const char *address, unsigned short port) {
     remote.sin_addr.s_addr = inet_addr(address);
     remote.sin_port = htons(port);
 
-    int res = connect(socket_fd, (struct sockaddr *) &remote, sizeof(remote));
+    int res = lwip_connect(socket_fd, (struct sockaddr *) &remote, sizeof(remote));
     if (res < 0) {
         printf("Connect failed\n");
     }
@@ -94,15 +94,15 @@ void *handler_loop() {
 
         char buffer[32];
 
-        int bytes_received = read(active_socket, buffer, 32);
+        int bytes_received = lwip_read(active_socket, buffer, 32);
         if (bytes_received == 0) {
             printf("[Receive failed. Connection is closed]\n");
-            close(active_socket);
+            lwip_close(active_socket);
             active_socket = 0;
             continue;
         } else if (bytes_received == -1) {
             printf("[Receive failed. Connection is aborted]\n");
-            close(active_socket);
+            lwip_close(active_socket);
             active_socket = 0;
             continue;
         }
@@ -151,7 +151,7 @@ void *listen_loop() {
         struct sockaddr_in receive_from;
         int receive_from_len = sizeof(receive_from);
 
-        int client_socket = accept(receive_socket, (struct sockaddr *) &receive_from, &receive_from_len);
+        int client_socket = lwip_accept(receive_socket, (struct sockaddr *) &receive_from, &receive_from_len);
         if (client_socket < 0) {
             printf("Accept failed: %d\n", client_socket);
             continue;
@@ -159,7 +159,7 @@ void *listen_loop() {
 
         if (active_socket) {
             printf("[Ignore incoming connection due to existing active socket]\n");
-            close(client_socket);
+            lwip_close(client_socket);
             continue;
         }
 
@@ -243,10 +243,10 @@ int main(int argc, char **argv) {
             active_socket = open_send_socket(remote_address, remote_port);
         }
 
-        int write_len = write(active_socket, buf, strlen(buf));
+        int write_len = lwip_write(active_socket, buf, strlen(buf));
         if (write_len < 0) {
             printf("[Write failed. Close connection]\n");
-            close(active_socket);
+            lwip_close(active_socket);
             active_socket = 0;
             continue;
         }
@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
         printf("[Wrote %d bytes]\n", write_len);
     }
 
-    close(active_socket);
+    lwip_close(active_socket);
 
     return 0;
 }
