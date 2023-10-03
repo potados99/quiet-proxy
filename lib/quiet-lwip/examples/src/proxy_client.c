@@ -17,7 +17,7 @@
 
 #include "relay.h"
 
-const int local_port = 2160;
+const int daemon_port = 2160;
 const int remote_port = 1080;
 
 const uint8_t mac[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x07};
@@ -67,7 +67,7 @@ int open_recv(const char *addr) {
     struct sockaddr_in *local_addr = calloc(1, sizeof(struct sockaddr_in));
     local_addr->sin_family = AF_INET;
     local_addr->sin_addr.s_addr = inet_addr(addr);
-    local_addr->sin_port = htons(local_port);
+    local_addr->sin_port = htons(daemon_port);
 
     int res = bind(socket_fd, (struct sockaddr *)local_addr, sizeof(struct sockaddr_in));
     free(local_addr);

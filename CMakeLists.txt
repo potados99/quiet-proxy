@@ -26,11 +26,15 @@ target_link_libraries(my_send quiet_lwip)
 add_executable(my_receive examples/receive.c)
 target_link_libraries(my_receive quiet_lwip)
 
-# 테스트용으로 Winsock을 사용하는 버전
-add_executable(practice_winsock main.c transport_winsock.c)
-target_link_libraries(practice_winsock pthread wsock32 ws2_32)
-target_compile_definitions(practice_winsock PRIVATE USE_WINSOCK)
+# 데몬: 테스트용으로 Winsock을 사용하는 버전
+add_executable(tunnel_daemon_winsock transport_winsock.c tunnel_daemon.c)
+target_link_libraries(tunnel_daemon_winsock pthread wsock32 ws2_32)
+target_compile_definitions(tunnel_daemon_winsock PRIVATE USE_WINSOCK)
 
-# 배포용으로 lwip를 사용하는 버전
-add_executable(practice_lwip main.c transport_lwip.c)
-target_link_libraries(practice_lwip quiet_lwip)
+# 데몬: 배포용으로 lwip를 사용하는 버전
+add_executable(tunnel_daemon_lwip transport_lwip.c tunnel_daemon.c)
+target_link_libraries(tunnel_daemon_lwip quiet_lwip)
+
+# 클라이언트
+add_executable(tunnel_client tunnel_client.c)
+target_link_libraries(tunnel_client pthread wsock32 ws2_32)

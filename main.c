@@ -4,15 +4,19 @@
 
 #include <stdio.h>
 #include <pthread.h>
+
+#include <winsock2.h>
+#include <mstcpip.h>
+
 #include "transport.h"
 
 char *local_address;
-int local_port;
+int daemon_port;
 
 char *remote_address;
 int remote_port;
 
-volatile int active_socket;
+volatile int active_lwip_socket;
 
 /**
  * 주소와 포트를 받아서 수신용 소켓을 엽니다.
@@ -81,112 +85,6 @@ int open_send_socket(const char *address, unsigned short port) {
 }
 
 /**
- * 활성화된 소켓에서 들어온 데이터를 읽습니다.
- * 만약 연결이 끊어지면, active_socket을 0으로 설정합니다.
- *
- * @return
- */
-void *handler_loop() {
-    while (1) {
-        if (!active_socket) {
-            continue;
-        }
-
-        char buffer[32];
-
-        int bytes_received = lwip_read(active_socket, buffer, 32);
-        if (bytes_received == 0) {
-            printf("[Receive failed. Connection is closed]\n");
-            lwip_close(active_socket);
-            active_socket = 0;
-            continue;
-        } else if (bytes_received == -1) {
-            printf("[Receive failed. Connection is aborted]\n");
-            lwip_close(active_socket);
-            active_socket = 0;
-            continue;
-        }
-
-        printf("[Received %d bytes]\n", bytes_received);
-
-        buffer[bytes_received] = 0;
-        printf("%s\n", buffer);
-    }
-}
-
-/**
- * 새 스레드에서 handler_loop를 실행합니다.
- *
- * @return 새로 생성된 스레드를 반환합니다.
- */
-pthread_t start_handler_thread() {
-    printf("[Starting handler thread]\n");
-
-    pthread_t thread;
-    pthread_create(&thread, NULL, handler_loop, NULL);
-    return thread;
-}
-
-/**
- * 수신용 소켓을 열고, 새로 들어오는 연결을 감지합니다.
- * 새 연결이 생기면, 새 스레드에서 새 연결을 처리합니다.
- *
- * 만약 이미 활성화된 소켓이 있으면, 새 연결을 무시합니다.
- *
- * @return
- */
-void *listen_loop() {
-    int receive_socket = open_receive_socket(local_address, local_port);
-    if (receive_socket < 0) {
-        return NULL;
-    }
-
-    printf("[Start listening on receive socket]\n");
-
-    while (1) {
-        if (active_socket) {
-            continue;
-        }
-
-        struct sockaddr_in receive_from;
-        int receive_from_len = sizeof(receive_from);
-
-        int client_socket = lwip_accept(receive_socket, (struct sockaddr *) &receive_from, &receive_from_len);
-        if (client_socket < 0) {
-            printf("Accept failed: %d\n", client_socket);
-            continue;
-        }
-
-        if (active_socket) {
-            printf("[Ignore incoming connection due to existing active socket]\n");
-            lwip_close(client_socket);
-            continue;
-        }
-
-        if (set_keepalive(client_socket, 1, 1, 3) < 0) {
-            printf("[Failed to set keepalive. But keep going]\n");
-        }
-
-        printf("[New connection from: %s:%d]\n", inet_ntoa(receive_from.sin_addr), ntohs(receive_from.sin_port));
-
-        active_socket = client_socket;
-    }
-}
-
-/**
- * 새 스레드에서 listen_loop를 실행합니다.
- *
- * @return 새로 생성된 스레드를 반환합니다.
- */
-pthread_t start_listen_thread() {
-    printf("[Starting listen thread]\n");
-
-    pthread_t thread;
-    pthread_create(&thread, NULL, listen_loop, NULL);
-    return thread;
-}
-
-/**
  * 프로그램 실행과 함께 들어온 인자들을 처리합니다.
  * 문제가 있었으면 -1을 반환합니다.
  *
@@ -201,12 +99,12 @@ int handle_args(int argc, char **argv) {
     }
 
     local_address = argv[1];
-    local_port = atoi(argv[2]);
+    daemon_port = atoi(argv[2]);
 
     remote_address = argv[3];
     remote_port = atoi(argv[4]);
 
-    printf("Local: %s:%d\n", local_address, local_port);
+    printf("Local: %s:%d\n", local_address, daemon_port);
     printf("Remote: %s:%d\n", remote_address, remote_port);
 
     return 0;
@@ -221,40 +119,121 @@ int main(int argc, char **argv) {
         return -2;
     }
 
-    // 연결을 기다리는 스레드
-    start_listen_thread();
+    int receive_socket = open_receive_socket(local_address, daemon_port);
+    if (receive_socket < 0) {
+        return -3;
+    }
 
-    // 연결된 소켓에서 듣는 스레드
-    start_handler_thread();
+    fd_set unix_read_fds;
+    fd_set unix_ret_fds;
 
-    // stdin 읽기 루프
+    fd_set lwip_read_fds;
+    fd_set lwip_ret_fds;
+
+    FD_ZERO(&unix_read_fds);
+    FD_ZERO(&lwip_read_fds);
+
+    FD_SET(STDIN_FILENO, &unix_read_fds);
+    FD_SET(receive_socket, &lwip_read_fds);
+    if (active_lwip_socket) {
+        FD_SET(active_lwip_socket, &lwip_read_fds);
+    }
+
+    int lwip_max_fd = max(receive_socket, active_lwip_socket);
+
     while (1) {
-        char buf[64];
-        scanf("%s", buf);
+        // if stdin?
+        // then send it to active socket
 
-        if (strcmp(buf, "q") == 0) {
+        // if new connection?
+        // then make it an active socket
+
+        // if active socket?
+        // then read from it
+
+        unix_ret_fds = unix_read_fds;
+        lwip_ret_fds = lwip_read_fds;
+
+        if (select(STDIN_FILENO+1, &unix_ret_fds, NULL, NULL, NULL) < 0) {
+            perror("[Unix select failed]");
             break;
         }
 
-        if (active_socket) {
-            printf("[Sending %d bytes using existing socket]\n", strlen(buf));
-        } else {
-            printf("[Sending %d bytes using new socket]\n", strlen(buf));
-            active_socket = open_send_socket(remote_address, remote_port);
+        if (FD_ISSET(0/*stdin*/, &lwip_ret_fds)) {
+            char buf[64];
+            scanf("%s", buf);
+
+            if (strcmp(buf, "q") == 0) {
+                break;
+            }
+
+            if (active_lwip_socket) {
+                printf("[Sending %d bytes using existing socket]\n", strlen(buf));
+            } else {
+                printf("[Sending %d bytes using new socket]\n", strlen(buf));
+                active_lwip_socket = open_send_socket(remote_address, remote_port);
+            }
+
+            int write_len = lwip_write(active_lwip_socket, buf, strlen(buf));
+            if (write_len < 0) {
+                printf("[Write failed. Close connection]\n");
+                lwip_close(active_lwip_socket);
+                active_lwip_socket = 0;
+                continue;
+            }
+
+            printf("[Wrote %d bytes]\n", write_len);
         }
 
-        int write_len = lwip_write(active_socket, buf, strlen(buf));
-        if (write_len < 0) {
-            printf("[Write failed. Close connection]\n");
-            lwip_close(active_socket);
-            active_socket = 0;
-            continue;
+        if (lwip_select(lwip_max_fd, &lwip_ret_fds, NULL, NULL, NULL) < 0) {
+            printf("[Lwip select failed]\n");
+            break;
         }
 
-        printf("[Wrote %d bytes]\n", write_len);
+        if (FD_ISSET(receive_socket, &lwip_ret_fds)) {
+            struct sockaddr_in receive_from;
+            int receive_from_len = sizeof(receive_from);
+
+            int client_socket = lwip_accept(receive_socket, (struct sockaddr *) &receive_from, &receive_from_len);
+            if (client_socket < 0) {
+                printf("Accept failed: %d\n", client_socket);
+            }
+
+            if (set_keepalive(client_socket, 1, 1, 3) < 0) {
+                printf("[Failed to set keepalive. But keep going]\n");
+            }
+
+            printf("[New connection from: %s:%d]\n", inet_ntoa(receive_from.sin_addr), ntohs(receive_from.sin_port));
+
+            if (active_lwip_socket) {
+                FD_CLR(active_lwip_socket, &lwip_read_fds);
+            }
+            active_lwip_socket = client_socket;
+            FD_SET(active_lwip_socket, &lwip_read_fds);
+        }
+
+        if (active_lwip_socket && FD_ISSET(active_lwip_socket, &lwip_ret_fds)) {
+            char buffer[32];
+
+            int bytes_received = lwip_read(active_lwip_socket, buffer, 32);
+            if (bytes_received == 0) {
+                printf("[Receive failed. Connection is closed]\n");
+                lwip_close(active_lwip_socket);
+                active_lwip_socket = 0;
+                continue;
+            } else if (bytes_received == -1) {
+                printf("[Receive failed. Connection is aborted]\n");
+                lwip_close(active_lwip_socket);
+                active_lwip_socket = 0;
+                continue;
+            }
+
+            printf("[Received %d bytes]\n", bytes_received);
+
+            buffer[bytes_received] = 0;
+            printf("%s\n", buffer);
+        }
     }
 
-    lwip_close(active_socket);
-
-    return 0;
+    return -1;
 }
