@@ -1136,9 +1136,9 @@ if (LIQUID_BUILD_BENCHMARKS)
                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                       )
 
-    add_executable(benchmark EXCLUDE_FROM_ALL ${benchmark_SOURCES})
-    add_dependencies(benchmark benchmark_include)
-    target_link_libraries(benchmark ${LIQUID_LIBRARY})
+    add_executable(libliquid_benchmark EXCLUDE_FROM_ALL ${benchmark_SOURCES})
+    add_dependencies(libliquid_benchmark benchmark_include)
+    target_link_libraries(libliquid_benchmark ${LIQUID_LIBRARY})
 endif()
 else ()
     message(WARNING "Benchmark suite cannot be compiled because sys/resource.h header hasn't been found.")

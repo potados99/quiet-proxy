@@ -51,6 +51,8 @@ of a device for the duration of active stream using those devices
 */
 
 #include <stdio.h>
+#include <wchar.h>
+#include <malloc.h>
 
 #if (defined(_WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200))) /* MSC version 6 and above */
 #pragma comment( lib, "setupapi.lib" )
@@ -202,6 +204,8 @@ Default is to use the pin category.
 
 #include <assert.h>
 #include <stdio.h>
+#include <intrin.h>
+#include <wctype.h>
 
 /* These next definitions allow the use of the KSUSER DLL */
 typedef /*KSDDKAPI*/ DWORD WINAPI KSCREATEPIN(HANDLE, PKSPIN_CONNECT, ACCESS_MASK, PHANDLE);
@@ -704,7 +708,7 @@ static void PaWinWDM_SetLastErrorInfo(long errCode, const char* fmt, ...)
     va_list list;
     char buffer[1024];
     va_start(list, fmt);
-    _vsnprintf(buffer, 1023, fmt, list);
+    vsnprintf(buffer, 1023, fmt, list);
     va_end(list);
     PaUtil_SetLastHostErrorInfo(paWDMKS, errCode, buffer);
 }
@@ -1260,10 +1264,10 @@ static PaError GetNameFromCategory(const GUID* pGUID, BOOL input, wchar_t* name,
 
             if (name != NULL && length > 0)
             {
-                int n = _snwprintf(name, length, L"%s", ptr->name);
+                int n = swprintf(name, length, L"%s", ptr->name);
                 if (usbTerminalGUID >= 0x601 && usbTerminalGUID < 0x700)
                 {
-                    _snwprintf(name + n, length - n, L" %s", (input ? L"In":L"Out"));
+                    swprintf(name + n, length - n, L" %s", (input ? L"In":L"Out"));
                 }
             }
             result = paNoError;
@@ -3015,7 +3019,7 @@ static BOOL IsUSBDevice(const wchar_t* devicePath)
 {
     /* Alex Lessard pointed out that different devices might present the device path with
        lower case letters. */
-    return (_wcsnicmp(devicePath, kUsbPrefix, sizeof(kUsbPrefix)/sizeof(kUsbPrefix[0]) ) == 0);
+    return (wcsncmp(devicePath, kUsbPrefix, sizeof(kUsbPrefix)/sizeof(kUsbPrefix[0]) ) == 0);
 }
 
 /* This should make it more language tolerant, I hope... */
@@ -3023,7 +3027,7 @@ static const wchar_t kUsbNamePrefix[] = L"USB Audio";
 
 static BOOL IsNameUSBAudioDevice(const wchar_t* friendlyName)
 {
-    return (_wcsnicmp(friendlyName, kUsbNamePrefix, sizeof(kUsbNamePrefix)/sizeof(kUsbNamePrefix[0])) == 0);
+    return (wcsncmp(friendlyName, kUsbNamePrefix, sizeof(kUsbNamePrefix)/sizeof(kUsbNamePrefix[0])) == 0);
 }
 
 typedef enum _tag_EAlias
@@ -3547,8 +3551,8 @@ static PaError ScanDeviceInfos( struct PaUtilHostApiRepresentation *hostApi, PaH
                 continue;
             }
 
-            devIsDefaultIn = (defaultInDevPath && (_wcsicmp(pFilter->devInfo.filterPath, defaultInDevPath) == 0));
-            devIsDefaultOut = (defaultOutDevPath && (_wcsicmp(pFilter->devInfo.filterPath, defaultOutDevPath) == 0));
+            devIsDefaultIn = (defaultInDevPath && (wcscasecmp(pFilter->devInfo.filterPath, defaultInDevPath) == 0));
+            devIsDefaultOut = (defaultOutDevPath && (wcscasecmp(pFilter->devInfo.filterPath, defaultOutDevPath) == 0));
 
             for (i = 0; i < pFilter->pinCount; ++i)
             {
@@ -3602,10 +3606,10 @@ static PaError ScanDeviceInfos( struct PaUtilHostApiRepresentation *hostApi, PaH
                         if (nameIndex > 0)
                         {
                             /* This name has multiple instances, so we post fix with a number */
-                            n += _snwprintf(localCompositeName + n, MAX_PATH - n, L" %u", nameIndex);
+                            n += swprintf(localCompositeName + n, MAX_PATH - n, L" %u", nameIndex);
                         }
                         /* Postfix with filter name */
-                        _snwprintf(localCompositeName + n, MAX_PATH - n, L" (%s)", pFilter->friendlyName);
+                        swprintf(localCompositeName + n, MAX_PATH - n, L" (%s)", pFilter->friendlyName);
                     }
 
                     /* Convert wide char string to utf-8 */
@@ -5112,7 +5116,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                 {
                     unsigned long pos = 0xdeadc0de;
                     PA_DEBUG(("Failed to register capture position register, using PinGetAudioPositionViaIOCTLWrite\n"));
-                    stream->capture.pPin->fnAudioPosition = PinGetAudioPositionViaIOCTLWrite;
+                    stream->capture.pPin->fnAudioPosition = (FunctionGetPinAudioPosition) PinGetAudioPositionViaIOCTLWrite;
                     /* Test position function */
                     result = (stream->capture.pPin->fnAudioPosition)(stream->capture.pPin, &pos);
                     if (result != paNoError || pos != 0x0)
@@ -5125,7 +5129,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                 }
                 else
                 {
-                    stream->capture.pPin->fnAudioPosition = PinGetAudioPositionMemoryMapped;
+                    stream->capture.pPin->fnAudioPosition = (FunctionGetPinAudioPosition) PinGetAudioPositionMemoryMapped;
                 }
             }
             break;
@@ -5234,7 +5238,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                 {
                     unsigned long pos = 0xdeadc0de;
                     PA_DEBUG(("Failed to register rendering position register, using PinGetAudioPositionViaIOCTLRead\n"));
-                    stream->render.pPin->fnAudioPosition = PinGetAudioPositionViaIOCTLRead;
+                    stream->render.pPin->fnAudioPosition = (FunctionGetPinAudioPosition) PinGetAudioPositionViaIOCTLRead;
                     /* Test position function */
                     result = (stream->render.pPin->fnAudioPosition)(stream->render.pPin, &pos);
                     if (result != paNoError || pos != 0x0)
@@ -5247,7 +5251,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                 }
                 else
                 {
-                    stream->render.pPin->fnAudioPosition = PinGetAudioPositionMemoryMapped;
+                    stream->render.pPin->fnAudioPosition = (FunctionGetPinAudioPosition) PinGetAudioPositionMemoryMapped;
                 }
             }
             break;
