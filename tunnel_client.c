@@ -7,6 +7,8 @@
 #include <mstcpip.h>
 #include <pthread.h>
 
+#include "handshake_winsock.h"
+
 char *daemon_address;
 int daemon_port;
 
@@ -155,6 +157,15 @@ int main(int argc, char **argv) {
                 active_socket = 0;
                 continue;
             }
+
+            int connection_id = (int)'a'; // TODO hardcoded...
+            if (winsock_request_handshake(active_socket, &connection_id) < 0) {
+                printf("Handshake failed.\n");
+                closesocket(active_socket);
+                active_socket = 0;
+                continue;
+            }
+
             start_handler();
         }
 

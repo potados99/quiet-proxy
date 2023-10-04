@@ -19,6 +19,10 @@
 #include <mstcpip.h>
 
 #include "transport.h"
+#include "array_list.h"
+#include "connection.h"
+#include "handshake_lwip.h"
+#include "handshake_winsock.h"
 
 char *local_address;
 int local_port;
@@ -29,10 +33,10 @@ int remote_port;
 const char *daemon_address = "127.0.0.1";
 int daemon_port;
 
-volatile int active_unix_socket;
-volatile int active_lwip_socket;
+struct array_list winsock_sockets;
+struct array_list lwip_sockets;
 
-int open_unix_receive_socket(const char *address, unsigned short port) {
+int winsock_receive_socket(const char *address, unsigned short port) {
     int socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_fd < 0) {
         printf("Socket failed\n");
@@ -67,7 +71,7 @@ int open_unix_receive_socket(const char *address, unsigned short port) {
  * @param port
  * @return
  */
-int open_lwip_receive_socket(const char *address, unsigned short port) {
+int lwip_receive_socket(const char *address, unsigned short port) {
     int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_fd < 0) {
         printf("Socket failed\n");
@@ -102,7 +106,7 @@ int open_lwip_receive_socket(const char *address, unsigned short port) {
  * @param port
  * @return
  */
-int open_lwip_send_socket(const char *address, unsigned short port) {
+int lwip_send_socket(const char *address, unsigned short port) {
     int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_fd < 0) {
         printf("Socket failed\n");
@@ -127,100 +131,262 @@ int open_lwip_send_socket(const char *address, unsigned short port) {
     return socket_fd;
 }
 
-void *handler() {
-    printf("yo!\n");
-
-    fd_set unix_read_fds;
-    fd_set lwip_read_fds;
+void *winsock_handler() {
+    fd_set read_fds;
 
     struct timeval timeout;
-
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
 
+    int socket;
+    int selected;
+
+    int receive_socket = winsock_receive_socket(daemon_address, daemon_port);
+    if (receive_socket < 0) {
+        printf("Failed to open winsock receive socket.\n");
+        return NULL;
+    }
+
+    array_list_init(&winsock_sockets);
+
     while (1) {
-        if (!active_unix_socket || !active_lwip_socket) {
+        FD_ZERO(&read_fds);
+
+        // the listening socket
+        FD_SET(receive_socket, &read_fds);
+
+        // the client sockets
+        array_list_foreach(&winsock_sockets, socket) {
+            FD_SET(socket, &read_fds);
+        }
+
+        selected = select(0/*ignored on windows*/, &read_fds, NULL, NULL, &timeout);
+        if (selected == 0) {
+            // timed out
             continue;
         }
-
-        FD_ZERO(&unix_read_fds);
-        FD_ZERO(&lwip_read_fds);
-
-        FD_SET(active_unix_socket, &unix_read_fds);
-
-        if (select(0, &unix_read_fds, NULL, NULL, &timeout) < 0) {
-            printf("Unix select failed\n");
+        if (selected == -1) {
+            printf("Winsock select failed\n");
             break;
         }
 
-        if (FD_ISSET(active_unix_socket, &unix_read_fds)) {
-            char buffer[32];
+        // new connection?
+        if (FD_ISSET(receive_socket, &read_fds)) {
+            struct sockaddr_in receive_from;
+            int receive_from_len = sizeof(receive_from);
 
-            int bytes_received = recv(active_unix_socket, buffer, 32, 0);
-            if (bytes_received == 0) {
-                printf("Unix receive failed. Connection is closed.\n");
-                closesocket(active_unix_socket);
-                active_unix_socket = 0;
-                continue;
-            } else if (bytes_received == -1) {
-                printf("Unix receive failed. Connection is aborted.\n");
-                closesocket(active_unix_socket);
-                active_unix_socket = 0;
+            volatile/*prevent optimization*/
+            int client_socket = accept(receive_socket, (struct sockaddr *) &receive_from, &receive_from_len);
+            if (client_socket < 0) {
+                printf("Winsock accept failed\n");
                 continue;
             }
 
-            printf("Received %d bytes from unix socket. Forward to lwip socket.\n", bytes_received);
+            printf("New winsock connection from: %s:%d\n", inet_ntoa(receive_from.sin_addr),
+                   ntohs(receive_from.sin_port));
 
-            buffer[bytes_received] = 0;
+            // The new connection will be followed by a single byte, which is the connection id.
+            // Read that and store it.
+            int connection_id;
+            if (winsock_accept_handshake(client_socket, &connection_id) < 0) {
+                printf("Winsock handshake failed.\n");
+                closesocket(client_socket);
+                continue;
+            }
 
-            int wrote = lwip_write(active_lwip_socket, buffer, bytes_received);
-            if (wrote < 0) {
-                printf("Failed to write to lwip socket.\n");
-                break;
+            printf("Handshake succeeded. The new winsock connection(socket %d) id is %d.\n", client_socket,
+                   connection_id);
+
+            array_list_add(&winsock_sockets, client_socket);
+            pair_winsock_socket(client_socket, connection_id);
+
+            int paired_lwip_socket = get_paired_lwip_socket(client_socket);
+            if (paired_lwip_socket < 0) {
+                printf("Creating new lwip connection for connection id %d.\n", connection_id);
+
+                int lwip_socket = lwip_send_socket(remote_address, remote_port);
+                if (lwip_socket < 0) {
+                    printf("Failed to open lwip send socket.\n");
+                    continue;
+                }
+
+                if (lwip_request_handshake(lwip_socket, &connection_id) < 0) {
+                    printf("Lwip handshake failed.\n");
+                    lwip_close(lwip_socket);
+                    continue;
+                }
+
+                array_list_add(&lwip_sockets, lwip_socket);
+                pair_winsock_socket(client_socket, connection_id);
+                pair_lwip_socket(lwip_socket, connection_id);
+            } else {
+                printf("Lwip connection for this connection id(%d) already exists: %d.\n", connection_id,
+                       paired_lwip_socket);
             }
         }
 
-        FD_SET(active_lwip_socket, &lwip_read_fds);
+        array_list_foreach(&winsock_sockets, socket) {
+            // bytes incoming?
+            if (FD_ISSET(socket, &read_fds)) {
+                char buffer[1024];
+                int read = recv(socket, buffer, sizeof(buffer), 0);
+                if (read <= 0) {
+                    printf("Winsock connection closed\n");
+                    closesocket(socket);
+                    array_list_remove(&winsock_sockets, socket);
+                    unpair_winsock_socket(socket);
+                    continue;
+                }
 
-        if (lwip_select(active_lwip_socket + 1, &lwip_read_fds, NULL, NULL, &timeout) < 0) {
-            printf("Lwip select failed\n");
-            break;
-        }
+                printf("Winsock read %d bytes\n", read);
 
-        if (FD_ISSET(active_lwip_socket, &lwip_read_fds)) {
-            char buffer[32];
+                int lwip_socket = get_paired_lwip_socket(socket);
+                if (lwip_socket < 0) {
+                    printf("Winsock socket is not paired with lwip socket. Ignoring received data.\n");
+                    continue;
+                }
 
-            int bytes_received = lwip_read(active_lwip_socket, buffer, 32);
-            if (bytes_received == 0) {
-                printf("Lwip receive failed. Connection is closed.\n");
-                lwip_close(active_lwip_socket);
-                active_lwip_socket = 0;
-                continue;
-            } else if (bytes_received == -1) {
-                printf("Lwip receive failed. Connection is aborted.\n");
-                lwip_close(active_lwip_socket);
-                active_lwip_socket = 0;
-                continue;
-            }
+                int wrote = lwip_write(lwip_socket, buffer, read);
+                if (wrote < 0) {
+                    printf("Failed to write to paired lwip socket.\n");
+                    lwip_close(lwip_socket);
+                    array_list_remove(&lwip_sockets, lwip_socket);
+                    unpair_lwip_socket(lwip_socket);
+                    continue;
+                }
 
-            printf("Received %d bytes from lwip socket. Forward to unix socket.\n", bytes_received);
-
-            buffer[bytes_received] = 0;
-
-            int wrote = send(active_unix_socket, buffer, bytes_received, 0);
-            if (wrote < 0) {
-                printf("Failed to write to unix socket.\n");
-                break;
+                printf("Forwarded %d bytes from winsock to lwip.\n", wrote);
             }
         }
     }
 }
 
-pthread_t start_handler() {
-    printf("Starting handler thread.\n");
+pthread_t start_winsock_thread() {
+    printf("Starting winsock thread.\n");
 
     pthread_t thread;
-    pthread_create(&thread, NULL, handler, NULL);
+    pthread_create(&thread, NULL, winsock_handler, NULL);
+
+    return thread;
+}
+
+void *lwip_handler() {
+    fd_set read_fds;
+
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    int socket;
+    int max_fd;
+    int selected;
+
+    int receive_socket = lwip_receive_socket(local_address, local_port);
+    if (receive_socket < 0) {
+        printf("Failed to open lwip receive socket.\n");
+        return NULL;
+    }
+
+    array_list_init(&lwip_sockets);
+
+    while (1) {
+        FD_ZERO(&read_fds);
+
+        // the listening socket
+        FD_SET(receive_socket, &read_fds);
+        max_fd = receive_socket;
+
+        // the client sockets
+        array_list_foreach(&lwip_sockets, socket) {
+            FD_SET(socket, &read_fds);
+
+            if (socket > max_fd) {
+                max_fd = socket;
+            }
+        }
+
+        selected = lwip_select(max_fd + 1, &read_fds, NULL, NULL, &timeout);
+        if (selected == 0) {
+            // timed out
+            continue;
+        }
+        if (selected == -1) {
+            printf("Lwip select failed\n");
+            break;
+        }
+
+        // new connection?
+        if (FD_ISSET(receive_socket, &read_fds)) {
+            struct sockaddr_in receive_from;
+            int receive_from_len = sizeof(receive_from);
+
+            volatile/*prevent optimization*/
+            int client_socket = lwip_accept(receive_socket, (struct sockaddr *) &receive_from,
+                                            &receive_from_len);
+            if (client_socket < 0) {
+                printf("Lwip accept failed\n");
+                continue;
+            }
+            printf("New lwip connection from: %s:%d.\n", inet_ntoa(receive_from.sin_addr),
+                   ntohs(receive_from.sin_port));
+
+            // The new connection will be followed by a single byte, which is the connection id.
+            // Read that and store it.
+            int connection_id;
+            if (lwip_accept_handshake(client_socket, &connection_id) < 0) {
+                printf("Lwip handshake failed.\n");
+                lwip_close(client_socket);
+                continue;
+            }
+
+            printf("Handshake succeeded. The new lwip connection id is %d.\n", connection_id);
+
+            array_list_add(&lwip_sockets, client_socket);
+            pair_lwip_socket(client_socket, connection_id);
+        }
+
+        array_list_foreach(&lwip_sockets, socket) {
+            // bytes incoming?
+            if (FD_ISSET(socket, &read_fds)) {
+                char buffer[1024];
+                int read = lwip_read(socket, buffer, sizeof(buffer));
+                if (read <= 0) {
+                    printf("Lwip connection closed.\n");
+                    lwip_close(socket);
+                    array_list_remove(&lwip_sockets, socket);
+                    unpair_lwip_socket(socket);
+                    continue;
+                }
+
+                printf("Lwip read %d bytes.\n", read);
+
+                int winsock_socket = get_paired_winsock_socket(socket);
+                if (winsock_socket < 0) {
+                    printf("Lwip socket is not paired with winsock socket. Ignoring received data.\n");
+                    continue;
+                }
+
+                int wrote = send(winsock_socket, buffer, read, 0);
+                if (wrote < 0) {
+                    printf("Failed to write to paired winsock socket.\n");
+                    closesocket(winsock_socket);
+                    array_list_remove(&winsock_sockets, winsock_socket);
+                    unpair_winsock_socket(winsock_socket);
+                    continue;
+                }
+
+                printf("Forwarded %d bytes from lwip to winsock.\n", wrote);
+            }
+        }
+    }
+}
+
+pthread_t start_lwip_thread() {
+    printf("Starting lwip thread.\n");
+
+    pthread_t thread;
+    pthread_create(&thread, NULL, lwip_handler, NULL);
+
     return thread;
 }
 
@@ -253,7 +419,6 @@ int handle_args(int argc, char **argv) {
     return 0;
 }
 
-
 int main(int argc, char **argv) {
     if (handle_args(argc, argv) < 0) {
         return -1;
@@ -263,106 +428,11 @@ int main(int argc, char **argv) {
         return -2;
     }
 
-    int unix_receive_socket = open_unix_receive_socket(daemon_address, daemon_port);
-    int lwip_receive_socket = open_lwip_receive_socket(local_address, local_port);
+    pthread_t winsock_thread = start_winsock_thread();
+    pthread_t lwip_thread = start_lwip_thread();
 
-    fd_set unix_read_fds;
-    fd_set lwip_read_fds;
-
-    struct timeval timeout;
-
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
-
-    while (1) {
-        FD_ZERO(&unix_read_fds);
-        FD_ZERO(&lwip_read_fds);
-
-        if (!active_unix_socket) {
-            FD_SET(unix_receive_socket, &unix_read_fds);
-
-            if (select(0, &unix_read_fds, NULL, NULL, &timeout) < 0) {
-                printf("Unix select failed\n");
-                return -1;
-            }
-
-            if (FD_ISSET(unix_receive_socket, &unix_read_fds)) {
-                struct sockaddr_in receive_from;
-                int receive_from_len = sizeof(receive_from);
-
-                int unix_client_socket = accept(unix_receive_socket, (struct sockaddr *) &receive_from,
-                                                &receive_from_len);
-                if (unix_client_socket < 0) {
-                    printf("Unix accept failed\n");
-                    return -1;
-                }
-                printf("New unix connection from: %s:%d\n", inet_ntoa(receive_from.sin_addr),
-                       ntohs(receive_from.sin_port));
-
-                active_unix_socket = unix_client_socket;
-
-                if (active_lwip_socket) {
-                    printf("Reuse lwip connection.\n");
-                } else {
-                    printf("Open new lwip connection.\n");
-                    int socket = open_lwip_send_socket(remote_address, remote_port);
-                    if (socket < 0) {
-                        printf("Failed to open lwip connection.\n");
-                        return -1;
-                    }
-
-                    int wrote = lwip_write(socket, "hello", 5);
-                    if (wrote < 0) {
-                        printf("Failed to write handshake to lwip connection.\n");
-                        return -1;
-                    }
-
-                    active_lwip_socket = socket;
-
-                    printf("Handshake sent. Active lwip socket is %d.\n", active_lwip_socket);
-                }
-
-                printf("Start handling.\n");
-                start_handler();
-            }
-        }
-
-        if (!active_lwip_socket) {
-            FD_SET(lwip_receive_socket, &lwip_read_fds);
-
-            if (lwip_select(lwip_receive_socket + 1, &lwip_read_fds, NULL, NULL, &timeout) < 0) {
-                printf("Lwip select failed\n");
-                return -1;
-            }
-
-            if (FD_ISSET(lwip_receive_socket, &lwip_read_fds)) {
-                struct sockaddr_in receive_from;
-                int receive_from_len = sizeof(receive_from);
-
-                int lwip_client_socket = lwip_accept(lwip_receive_socket, (struct sockaddr *) &receive_from,
-                                                     &receive_from_len);
-                if (lwip_client_socket < 0) {
-                    printf("Lwip accept failed\n");
-                    return -1;
-                }
-                printf("New lwip connection from: %s:%d\n", inet_ntoa(receive_from.sin_addr),
-                       ntohs(receive_from.sin_port));
-
-                char buf[32];
-                int read = lwip_read(lwip_client_socket, buf, 32);
-                if (read < 0) {
-                    printf("Lwip handshake read failed\n");
-                    return -1;
-                }
-                buf[read] = '\0';
-
-                active_lwip_socket = lwip_client_socket;
-
-                printf("Lwip handshake read %d bytes: %s. Active lwip socket is now %d.\n", read, buf,
-                       active_lwip_socket);
-            }
-        }
-    }
+    pthread_join(winsock_thread, NULL);
+    pthread_join(lwip_thread, NULL);
 
     return -1;
 }
