@@ -6,6 +6,8 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
+SET(PA_PRIVATE_COMPILE_DEFINITIONS ${PA_PRIVATE_COMPILE_DEFINITIONS} _WIN32 COBJMACROS)
+
 # Check if the user is building PortAudio stand-alone or as part of a larger
 # project. If this is part of a larger project (i.e. the CMakeLists.txt has
 # been imported by some other CMakeLists.txt), we don't want to trump over

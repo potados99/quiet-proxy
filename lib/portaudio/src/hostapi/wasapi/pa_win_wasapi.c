@@ -47,6 +47,7 @@
 #include <stdio.h>
 #include <process.h>
 #include <assert.h>
+#include <wchar.h>
 
 // Max device count (if defined) causes max constant device count in the device list that
 // enables PaWasapi_UpdateDeviceList() API and makes it possible to update WASAPI list dynamically
@@ -1896,7 +1897,7 @@ static PaError FillDeviceInfo(PaWasapiHostApiRepresentation *paWasapi, void *pEn
             if (value.pwszVal)
                 WideCharToMultiByte(CP_UTF8, 0, value.pwszVal, (INT32)wcslen(value.pwszVal), (char *)deviceInfo->name, PA_WASAPI_DEVICE_NAME_LEN - 1, 0, 0);
             else
-                _snprintf((char *)deviceInfo->name, PA_WASAPI_DEVICE_NAME_LEN - 1, "baddev%d", index);
+                snprintf((char *)deviceInfo->name, PA_WASAPI_DEVICE_NAME_LEN - 1, "baddev%d", index);
 
             PropVariantClear(&value);
 
