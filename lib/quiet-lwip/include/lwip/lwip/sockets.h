@@ -105,14 +105,6 @@ typedef u32_t socklen_t;
 
 
 /*
- * Structure used for manipulating linger option.
- */
-struct linger {
-       int l_onoff;                /* option on/off */
-       int l_linger;               /* linger time */
-};
-
-/*
  * Level number for (get/set)sockopt() to apply to socket itself.
  */
 #define  SOL_SOCKET  0xfff    /* options for socket level */

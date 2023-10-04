@@ -14,9 +14,7 @@
 
 #include <stdio.h>
 #include <pthread.h>
-
 #include <winsock2.h>
-#include <mstcpip.h>
 
 #include "transport.h"
 #include "array_list.h"
@@ -37,6 +35,7 @@ struct array_list winsock_sockets;
 struct array_list lwip_sockets;
 
 int winsock_receive_socket(const char *address, unsigned short port) {
+    volatile
     int socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_fd < 0) {
         printf("Socket failed\n");
@@ -45,7 +44,7 @@ int winsock_receive_socket(const char *address, unsigned short port) {
 
     struct sockaddr_in *local_addr = calloc(1, sizeof(struct sockaddr_in));
     local_addr->sin_family = AF_INET;
-    local_addr->sin_addr.s_addr = inet_addr(address);
+    local_addr->sin_addr.S_un.S_addr = inet_addr(address);
     local_addr->sin_port = htons(port);
 
     int res = bind(socket_fd, (struct sockaddr *) local_addr, sizeof(struct sockaddr_in));
@@ -78,12 +77,12 @@ int lwip_receive_socket(const char *address, unsigned short port) {
         return -1;
     }
 
-    struct sockaddr_in *local_addr = calloc(1, sizeof(struct sockaddr_in));
+    struct lwip_sockaddr_in *local_addr = calloc(1, sizeof(struct lwip_sockaddr_in));
     local_addr->sin_family = AF_INET;
     local_addr->sin_addr.s_addr = inet_addr(address);
     local_addr->sin_port = htons(port);
 
-    int res = lwip_bind(socket_fd, (struct sockaddr *) local_addr, sizeof(struct sockaddr_in));
+    int res = lwip_bind(socket_fd, (struct lwip_sockaddr *) local_addr, sizeof(struct lwip_sockaddr_in));
     free(local_addr);
     if (res < 0) {
         printf("bind failed\n");
@@ -113,7 +112,7 @@ int lwip_send_socket(const char *address, unsigned short port) {
         return -1;
     }
 
-    struct sockaddr_in remote;
+    struct lwip_sockaddr_in remote;
     remote.sin_family = AF_INET;
     remote.sin_addr.s_addr = inet_addr(address);
     remote.sin_port = htons(port);
@@ -271,7 +270,7 @@ pthread_t start_winsock_thread() {
 }
 
 void *lwip_handler() {
-    fd_set read_fds;
+    lwip_fd_set read_fds;
 
     struct timeval timeout;
     timeout.tv_sec = 1;
@@ -290,15 +289,15 @@ void *lwip_handler() {
     array_list_init(&lwip_sockets);
 
     while (1) {
-        FD_ZERO(&read_fds);
+        LWIP_FD_ZERO(&read_fds);
 
         // the listening socket
-        FD_SET(receive_socket, &read_fds);
+        LWIP_FD_SET(receive_socket, &read_fds);
         max_fd = receive_socket;
 
         // the client sockets
         array_list_foreach(&lwip_sockets, socket) {
-            FD_SET(socket, &read_fds);
+            LWIP_FD_SET(socket, &read_fds);
 
             if (socket > max_fd) {
                 max_fd = socket;
@@ -316,7 +315,7 @@ void *lwip_handler() {
         }
 
         // new connection?
-        if (FD_ISSET(receive_socket, &read_fds)) {
+        if (LWIP_FD_ISSET(receive_socket, &read_fds)) {
             struct sockaddr_in receive_from;
             int receive_from_len = sizeof(receive_from);
 
@@ -341,13 +340,17 @@ void *lwip_handler() {
 
             printf("Handshake succeeded. The new lwip connection id is %d.\n", connection_id);
 
+            if (set_keepalive(client_socket, 1, 1, 3) < 0) {
+                printf("[Failed to set keepalive. But keep going]\n");
+            }
+
             array_list_add(&lwip_sockets, client_socket);
             pair_lwip_socket(client_socket, connection_id);
         }
 
         array_list_foreach(&lwip_sockets, socket) {
             // bytes incoming?
-            if (FD_ISSET(socket, &read_fds)) {
+            if (LWIP_FD_ISSET(socket, &read_fds)) {
                 char buffer[1024];
                 int read = lwip_read(socket, buffer, sizeof(buffer));
                 if (read <= 0) {
@@ -426,6 +429,13 @@ int main(int argc, char **argv) {
 
     if (setup_transport_layer(local_address) < 0) {
         return -2;
+    }
+
+    WSADATA WSAData;
+    int error = WSAStartup(MAKEWORD(2, 2), &WSAData);
+    if (error) {
+        printf("Error - Can not load 'winsock.dll' file\n");
+        return -1;
     }
 
     pthread_t winsock_thread = start_winsock_thread();

@@ -43,7 +43,8 @@ add_executable(tunnel_daemon_lwip tunnel_daemon.c
         connection.c
         handshake_winsock.c
         handshake_lwip.c)
-target_link_libraries(tunnel_daemon_lwip quiet_lwip)
+target_link_libraries(tunnel_daemon_lwip quiet_lwip wsock32 ws2_32)
+target_compile_definitions(tunnel_daemon_lwip PRIVATE _LWIP_DO_NOT_DEFINE_BSD_TYPES)
 
 # 클라이언트
 add_executable(tunnel_client tunnel_client.c
