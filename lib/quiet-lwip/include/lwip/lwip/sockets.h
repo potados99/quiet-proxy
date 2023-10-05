@@ -49,17 +49,17 @@ extern "C" {
 
 /* members are in network byte order */
 struct sockaddr_in {
-  u8_t sin_len;
-  u8_t sin_family;
-  u16_t sin_port;
-  struct in_addr sin_addr;
-  char sin_zero[8];
+    u8_t sin_len;
+    u8_t sin_family;
+    u16_t sin_port;
+    struct in_addr sin_addr;
+    char sin_zero[8];
 };
 
 struct sockaddr {
-  u8_t sa_len;
-  u8_t sa_family;
-  char sa_data[14];
+    u8_t sa_len;
+    u8_t sa_family;
+    char sa_data[14];
 };
 
 /* If your port already typedef's socklen_t, define SOCKLEN_T_DEFINED
@@ -103,6 +103,14 @@ typedef u32_t socklen_t;
 #define SO_CONTIMEO  0x1009    /* Unimplemented: connect timeout */
 #define SO_NO_CHECK  0x100a    /* don't create UDP checksum */
 
+
+/*
+ * Structure used for manipulating linger option.
+ */
+struct linger {
+    int l_onoff;                /* option on/off */
+    int l_linger;               /* linger time */
+};
 
 /*
  * Level number for (get/set)sockopt() to apply to socket itself.
@@ -231,8 +239,8 @@ typedef struct ip_mreq {
 #define IOC_OUT         0x40000000UL    /* copy out parameters */
 #define IOC_IN          0x80000000UL    /* copy in parameters */
 #define IOC_INOUT       (IOC_IN|IOC_OUT)
-                                        /* 0x20000000 distinguishes new &
-                                           old ioctl's */
+/* 0x20000000 distinguishes new &
+   old ioctl's */
 #define _IO(x,y)        (IOC_VOID|((x)<<8)|(y))
 
 #define _IOR(x,y,t)     (IOC_OUT|(((long)sizeof(t)&IOCPARM_MASK)<<16)|((x)<<8)|(y))
@@ -274,14 +282,14 @@ typedef struct ip_mreq {
 #endif
 
 #ifndef SHUT_RD
-  #define SHUT_RD   0
-  #define SHUT_WR   1
-  #define SHUT_RDWR 2
+#define SHUT_RD   0
+#define SHUT_WR   1
+#define SHUT_RDWR 2
 #endif
 
 /* FD_SET used for lwip_select */
 #ifndef FD_SET
-  #undef  FD_SETSIZE
+#undef  FD_SETSIZE
   /* Make FD_SETSIZE match NUM_SOCKETS in socket.c */
   #define FD_SETSIZE    MEMP_NUM_NETCONN
   #define FD_SET(n, p)  ((p)->fd_bits[(n)/8] |=  (1 << ((n) & 7)))
@@ -296,7 +304,7 @@ typedef struct ip_mreq {
 #endif /* FD_SET */
 
 /** LWIP_TIMEVAL_PRIVATE: if you want to use the struct timeval provided
- * by your system, set this to 0 and include <sys/time.h> in cc.h */ 
+ * by your system, set this to 0 and include <sys/time.h> in cc.h */
 #ifndef LWIP_TIMEVAL_PRIVATE
 #define LWIP_TIMEVAL_PRIVATE 1
 #endif
@@ -323,10 +331,10 @@ int lwip_listen(int s, int backlog);
 int lwip_recv(int s, void *mem, size_t len, int flags);
 int lwip_read(int s, void *mem, size_t len);
 int lwip_recvfrom(int s, void *mem, size_t len, int flags,
-      struct sockaddr *from, socklen_t *fromlen);
+                  struct sockaddr *from, socklen_t *fromlen);
 int lwip_send(int s, const void *dataptr, size_t size, int flags);
 int lwip_sendto(int s, const void *dataptr, size_t size, int flags,
-    const struct sockaddr *to, socklen_t tolen);
+                const struct sockaddr *to, socklen_t tolen);
 int lwip_socket(int domain, int type, int protocol);
 int lwip_write(int s, const void *dataptr, size_t size);
 int lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset,

@@ -22,20 +22,20 @@ typedef uint32_t quiet_lwip_ipv4_addr;
 struct netif;
 typedef struct netif quiet_lwip_portaudio_interface;
 
-ssize_t quiet_lwip_portaudio_get_next_audio_packet(quiet_lwip_portaudio_interface *iface);
+ssize_t quiet_lwip_portaudio_get_next_audio_packet(quiet_lwip_portaudio_interface *interface);
 
-void quiet_lwip_portaudio_recv_audio_packet(quiet_lwip_portaudio_interface *iface);
+void quiet_lwip_portaudio_recv_audio_packet(quiet_lwip_portaudio_interface *interface);
 
 quiet_lwip_portaudio_interface *quiet_lwip_portaudio_create(quiet_lwip_portaudio_driver_config *conf,
                                                             quiet_lwip_ipv4_addr local_address,
                                                             quiet_lwip_ipv4_addr netmask,
                                                             quiet_lwip_ipv4_addr gateway);
 
-void quiet_lwip_portaudio_destroy(quiet_lwip_portaudio_interface *iface);
+void quiet_lwip_portaudio_destroy(quiet_lwip_portaudio_interface *interface);
 
 struct quiet_lwip_portaudio_audio_threads;
 typedef struct quiet_lwip_portaudio_audio_threads quiet_lwip_portaudio_audio_threads;
 
-quiet_lwip_portaudio_audio_threads *quiet_lwip_portaudio_start_audio_threads(quiet_lwip_portaudio_interface *iface);
+quiet_lwip_portaudio_audio_threads *quiet_lwip_portaudio_start_audio_threads(quiet_lwip_portaudio_interface *interface);
 
 void quiet_lwip_portaudio_stop_audio_threads(quiet_lwip_portaudio_audio_threads *threads);
