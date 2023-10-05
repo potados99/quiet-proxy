@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include "opt.h"
+
 int start_lwip(const uint8_t *mac, uint32_t ipaddr, uint32_t netmask, uint32_t gateway);
 int stop_lwip();
 

@@ -4,9 +4,7 @@ relay_conn *relay_conn_create(int native_fd, int lwip_fd, size_t buf_len) {
     relay_conn *conn = calloc(1, sizeof(relay_conn));
 
     conn->fds[agent_native] = native_fd;
-    fcntl(native_fd, F_SETFL, O_NONBLOCK);
     conn->fds[agent_lwip] = lwip_fd;
-    lwip_fcntl(lwip_fd, F_SETFL, O_NONBLOCK);
 
     for (size_t i = 0; i < 2; i++) {
         conn->bufs[i] = malloc(buf_len * sizeof(uint8_t));
@@ -41,19 +39,19 @@ size_t relay_conn_write_buflen(const relay_conn *conn, int agent) {
     return conn->buflens[agent];
 }
 
-void relay_conn_destroy(relay_conn *conn) {
+void relay_conn_destroy(relay_conn *conn, relay_t *relay) {
     printf("destroying relay connection\n");
     for (size_t i = 0; i < 2; i++) {
         free(conn->bufs[i]);
     }
 
-    lwip_close(conn->fds[agent_lwip]);
-    close(conn->fds[agent_native]);
+    relay->close(conn->fds[relay->agent]);
+    relay->other_close(conn->fds[relay->other_agent]);
 
     free(conn);
 }
 
-void relay_conn_close(relay_conn *conn) {
+void relay_conn_close(relay_conn *conn, relay_t *relay) {
     int expected = 0;
     bool exchanged = atomic_compare_exchange_strong(&conn->close_count, &expected, 1);
 
@@ -63,7 +61,7 @@ void relay_conn_close(relay_conn *conn) {
 
     // we weren't able to swap in a 0, so it must already be a 1
     // collect this item
-    relay_conn_destroy(conn);
+    relay_conn_destroy(conn, relay);
 }
 
 void crossbar_init(crossbar *c) {
@@ -98,16 +96,6 @@ int lwip_errno() {
     // lwip can provide errno, but it doesn't namespace (e.g. lwip_errno) if it does
     // since that would clobber our native errno, we just have to make do with nothing
     return 0;
-}
-
-ssize_t _lwip_read(int desc, void *buf, size_t nbytes) {
-    // for some reason, lwip returns int instead of ssize_t
-    return (ssize_t)(lwip_read(desc, buf, nbytes));
-}
-
-ssize_t _lwip_write(int desc, const void *buf, size_t nbytes) {
-    // for some reason, lwip returns int instead of ssize_t
-    return (ssize_t)(lwip_write(desc, buf, nbytes));
 }
 
 void *relay(void *v_relay) {
@@ -201,7 +189,7 @@ void *relay(void *v_relay) {
                 } else if (read_res == 0) {
                     // eof
                     relay->other_shutdown(relay_conn_fd(relay_read[i], relay->other_agent), SHUT_WR);
-                    relay_conn_close(relay_read[i]);
+                    relay_conn_close(relay_read[i], relay);
                 } else {
                     int _errno = relay->get_errno();
                     if (_errno == EAGAIN || _errno == EWOULDBLOCK) {
@@ -209,7 +197,7 @@ void *relay(void *v_relay) {
                         new_read_len++;
                     } else {
                         relay->other_shutdown(relay_conn_fd(relay_read[i], relay->other_agent), SHUT_WR);
-                        relay_conn_close(relay_read[i]);
+                        relay_conn_close(relay_read[i], relay);
                     }
                 }
             } else {
@@ -246,7 +234,7 @@ void *relay(void *v_relay) {
                 } else if (write_res == 0) {
                     // eof
                     relay->other_shutdown(relay_conn_fd(relay_write[i], relay->other_agent), SHUT_RD);
-                    relay_conn_close(relay_write[i]);
+                    relay_conn_close(relay_write[i], relay);
                 } else {
                     int _errno = relay->get_errno();
                     if (_errno == EAGAIN || _errno == EWOULDBLOCK) {
@@ -255,7 +243,7 @@ void *relay(void *v_relay) {
                         new_write_len++;
                     } else {
                         relay->other_shutdown(relay_conn_fd(relay_write[i], relay->other_agent), SHUT_RD);
-                        relay_conn_close(relay_write[i]);
+                        relay_conn_close(relay_write[i], relay);
                     }
                 }
             } else {

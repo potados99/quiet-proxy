@@ -88,6 +88,7 @@ int app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
         struct sockaddr_in recv_from;
         int conn_fd = recv_connection(recv_socket, &recv_from);
         if (conn_fd < 0) {
+            log_message("app_loop() Accept failed.");
             continue;
         }
 

@@ -36,6 +36,12 @@ int socks_read_ip(int socket_fd, char **ip);
 
 int socks_read_port(int socket_fd, unsigned short int *port);
 
-int request_connect(int type, void *address, unsigned short int port);
+int request_connect(int type, void *buf, unsigned short int port);
+
+int readn(int fd, void *buf, int n);
+
+int readnull(int fd, char *buf, int size);
+
+int writen(int fd, void *buf, int n);
 
 #endif //QUIET_PRACTICE_SOCKS_H

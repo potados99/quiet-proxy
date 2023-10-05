@@ -11,8 +11,6 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
-#include "quiet-lwip/lwip-socket.h"
-
 static const int agent_lwip = 0;
 static const int agent_native = 1;
 
@@ -30,8 +28,6 @@ typedef struct {
 } relay_conn;
 
 relay_conn *relay_conn_create(int native_fd, int lwip_fd, size_t buf_len);
-
-void relay_conn_destroy(relay_conn *conn);
 
 #define num_relays (256)
 
@@ -55,10 +51,6 @@ int native_errno();
 
 int lwip_errno();
 
-ssize_t _lwip_read(int desc, void *buf, size_t nbytes);
-
-ssize_t _lwip_write(int desc, const void *buf, size_t nbytes);
-
 typedef struct {
     int agent;
     int other_agent;
@@ -68,8 +60,12 @@ typedef struct {
     ssize_t (*write)(int desc, const void *buf, size_t nbytes);
     int (*select)(int num_fds, fd_set *read_fds, fd_set *write_fds,
                   fd_set *except_fds, struct timeval *timeout);
+    int (*close)(int fd);
+    int (*other_close)(int fd);
     int (*other_shutdown)(int fd, int how);
     int (*get_errno)();
 } relay_t;
 
 pthread_t start_relay_thread(relay_t *relay_obj);
+
+void relay_conn_destroy(relay_conn *conn, relay_t *relay);

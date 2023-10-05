@@ -3,6 +3,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 
 #include <quiet-lwip-portaudio.h>
 #include <quiet-lwip/lwip-socket.h>
@@ -14,6 +15,8 @@
 #include "socks.h"
 #include "socks4.h"
 #include "socks5.h"
+
+#include "lwip_mock.h"
 
 const char *listening_address = PROXY_SERVER_LISTENING_ADDRESS;
 const int listening_port = PROXY_SERVER_LISTENING_PORT;
@@ -53,9 +56,16 @@ int open_recv(const char *addr) {
 }
 
 int recv_connection(int socket_fd, struct lwip_sockaddr_in *recv_from) {
-    lwip_socklen_t recv_from_len = sizeof(*recv_from);
+    int recv_from_len = sizeof(*recv_from);
 
-    return lwip_accept(socket_fd, (struct lwip_sockaddr *) recv_from, &recv_from_len);
+    int conn_fd = lwip_accept(socket_fd, (struct lwip_sockaddr *) recv_from, &recv_from_len);
+    if (conn_fd < 0) {
+        return -1;
+    }
+
+    lwip_fcntl(conn_fd, F_SETFL, O_NONBLOCK);
+
+    return conn_fd;
 }
 
 void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
@@ -71,6 +81,7 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
         struct lwip_sockaddr_in recv_from;
         int conn_fd = recv_connection(recv_socket, &recv_from);
         if (conn_fd < 0) {
+            log_message("app_loop() Couldn't accept connection.");
             continue;
         }
 
@@ -229,7 +240,7 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                             log_message("Socks4: connect by ip & port", ip, p);
 
                             if ((remote_fd = request_connect(SOCKS_ADDR_IPV4, ip, p)) < 0) {
-                                socks4_send_response(conn_fd, 0x5a);
+                                socks4_send_response(conn_fd, 0x5b);
                                 lwip_close(conn_fd);
                                 log_message("app_loop() socks request failed.");
                                 free(ip);
@@ -268,7 +279,7 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
 }
 
 int main(int argc, char **argv) {
-    signal(SIGPIPE, SIG_IGN);
+   // signal(SIGPIPE, SIG_IGN);
     log_output(stdout);
 
 #if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_LWIP
@@ -287,9 +298,11 @@ int main(int argc, char **argv) {
             .other_agent = agent_native,
             .incoming = &client_crossbar,
             .outgoing = &remote_crossbar,
-            .read = _lwip_read,
-            .write = _lwip_write,
+            .read = lwip_read,
+            .write = lwip_write,
             .select = lwip_select,
+            .close = lwip_close,
+            .other_close = close,
             .other_shutdown = shutdown,
             .get_errno = lwip_errno,
     };
@@ -302,6 +315,8 @@ int main(int argc, char **argv) {
             .read = read,
             .write = write,
             .select = select,
+            .close = close,
+            .other_close = lwip_close,
             .other_shutdown = lwip_shutdown,
             .get_errno = native_errno,
     };
