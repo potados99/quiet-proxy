@@ -279,7 +279,7 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
 }
 
 int main(int argc, char **argv) {
-   // signal(SIGPIPE, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
     log_output(stdout);
 
 #if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_LWIP
@@ -298,8 +298,8 @@ int main(int argc, char **argv) {
             .other_agent = agent_native,
             .incoming = &client_crossbar,
             .outgoing = &remote_crossbar,
-            .read = lwip_read,
-            .write = lwip_write,
+            .read = (ssize_t (*)(int, void *, size_t)) lwip_read,
+            .write = (ssize_t (*)(int, const void *, size_t)) lwip_write,
             .select = lwip_select,
             .close = lwip_close,
             .other_close = close,

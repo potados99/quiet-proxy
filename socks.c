@@ -9,6 +9,9 @@
 
 #include <netdb.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/select.h>
 #include <quiet-lwip-portaudio.h>
 #include <quiet-lwip/lwip-socket.h>
 
@@ -152,6 +155,7 @@ int readn(int fd, void *buf, int n) {
     while (left > 0) {
         if ((nread = lwip_read(fd, buf, left)) == -1) {
             if (errno == EINTR || errno == EAGAIN) {
+                errno = 0; // ignore
                 continue;
             }
         } else {

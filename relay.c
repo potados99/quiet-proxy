@@ -1,5 +1,7 @@
 #include "relay.h"
 
+#include "util.h"
+
 relay_conn *relay_conn_create(int native_fd, int lwip_fd, size_t buf_len) {
     relay_conn *conn = calloc(1, sizeof(relay_conn));
 
@@ -40,7 +42,8 @@ size_t relay_conn_write_buflen(const relay_conn *conn, int agent) {
 }
 
 void relay_conn_destroy(relay_conn *conn, relay_t *relay) {
-    printf("destroying relay connection\n");
+    log_message("Destroying relay connection.");
+
     for (size_t i = 0; i < 2; i++) {
         free(conn->bufs[i]);
     }
