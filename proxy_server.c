@@ -7,20 +7,21 @@
 #include <quiet-lwip-portaudio.h>
 #include <quiet-lwip/lwip-socket.h>
 
-#include "relay.h"
+#include "opt.h"
 #include "lwip.h"
 #include "util.h"
+#include "relay.h"
 #include "socks.h"
 #include "socks4.h"
 #include "socks5.h"
 
-const int local_port = 1080;
+const char *listening_address = PROXY_SERVER_LISTENING_ADDRESS;
+const int listening_port = PROXY_SERVER_LISTENING_PORT;
 
-const uint8_t mac[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x07};
-const quiet_lwip_ipv4_addr ipaddr = (uint32_t) 0xc0a80008;   // 192.168.0.8
-const char *ipaddr_s = "192.168.0.8";
-const quiet_lwip_ipv4_addr netmask = (uint32_t) 0xffffff00;  // 255.255.255.0
-const quiet_lwip_ipv4_addr gateway = (uint32_t) 0xc0a80001;  // 192.168.0.1
+const uint8_t *mac = PROXY_SERVER_LWIP_MAC;
+const quiet_lwip_ipv4_addr ipaddr = PROXY_SERVER_LWIP_ADDRESS_U32;
+const quiet_lwip_ipv4_addr netmask = PROXY_SERVER_LWIP_NETMASK_U32;
+const quiet_lwip_ipv4_addr gateway = PROXY_SERVER_LWIP_GATEWAY_U32;
 
 int open_recv(const char *addr) {
     int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, 0);
@@ -32,7 +33,7 @@ int open_recv(const char *addr) {
     struct lwip_sockaddr_in *local_addr = calloc(1, sizeof(struct lwip_sockaddr_in));
     local_addr->sin_family = AF_INET;
     local_addr->sin_addr.s_addr = inet_addr(addr);
-    local_addr->sin_port = htons(local_port);
+    local_addr->sin_port = htons(listening_port);
 
     int res = lwip_bind(socket_fd, (struct lwip_sockaddr *) local_addr, sizeof(struct lwip_sockaddr_in));
     free(local_addr);
@@ -57,10 +58,10 @@ int recv_connection(int socket_fd, struct lwip_sockaddr_in *recv_from) {
     return lwip_accept(socket_fd, (struct lwip_sockaddr *) recv_from, &recv_from_len);
 }
 
-void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
-    int recv_socket = open_recv(ipaddr_s);
+void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
+    int recv_socket = open_recv(listening_address);
     if (recv_socket < 0) {
-        log_message("start_app_loop() couldn't open socket for listening.");
+        log_message("app_loop() couldn't open socket for listening.");
         exit(1);
     }
 
@@ -75,13 +76,12 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
 
         struct in_addr local_domain;
         local_domain.s_addr = recv_from.sin_addr.s_addr;
-
         log_message("Received connection from %s", inet_ntoa(local_domain));
 
         int version;
         int methods;
         if (socks_invitation(conn_fd, &version, &methods) < 0) {
-            log_message("start_app_loop() Socks invitation failed.");
+            log_message("app_loop() Socks invitation failed.");
             lwip_close(conn_fd);
             continue;
         }
@@ -89,20 +89,20 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
         switch (version) {
             case SOCKS_VERSION5: {
                 if (socks5_auth(conn_fd, methods) < 0) {
-                    log_message("start_app_loop() Socks auth failed.");
+                    log_message("app_loop() Socks auth failed.");
                     lwip_close(conn_fd);
                     continue;
                 }
 
                 if (socks5_auth_reply(conn_fd) < 0) {
-                    log_message("start_app_loop() Socks auth reply failed.");
+                    log_message("app_loop() Socks auth reply failed.");
                     lwip_close(conn_fd);
                     continue;
                 }
 
                 int command;
                 if (socks5_command(conn_fd, &command) < 0) {
-                    log_message("start_app_loop() Socks command failed.");
+                    log_message("app_loop() Socks command failed.");
                     lwip_close(conn_fd);
                     continue;
                 }
@@ -111,28 +111,28 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                     case SOCKS_ADDR_IPV4: {
                         char *ip;
                         if (socks_read_ip(conn_fd, &ip) < 0) {
-                            log_message("start_app_loop() Socks read ip failed.");
+                            log_message("app_loop() Socks read ip failed.");
                             lwip_close(conn_fd);
                             continue;
                         }
 
                         unsigned short int port;
                         if (socks_read_port(conn_fd, &port) < 0) {
-                            log_message("start_app_loop() Socks read port failed.");
+                            log_message("app_loop() Socks read port failed.");
                             lwip_close(conn_fd);
                             continue;
                         }
 
                         if ((remote_fd = request_connect(SOCKS_ADDR_IPV4, ip, port)) < 0) {
                             lwip_close(conn_fd);
-                            log_message("start_app_loop() socks request failed.");
+                            log_message("app_loop() socks request failed.");
                             free(ip);
                             continue;
                         }
 
                         if (socks5_ip_send_response(conn_fd, ip, port) < 0) {
                             lwip_close(conn_fd);
-                            log_message("start_app_loop() socks request reply failed.");
+                            log_message("app_loop() socks request reply failed.");
                             free(ip);
                             continue;
                         }
@@ -145,28 +145,28 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                         char *domain;
                         int domain_len;
                         if (socks5_read_domain(conn_fd, &domain, &domain_len) < 0) {
-                            log_message("start_app_loop() Socks read domain failed.");
+                            log_message("app_loop() Socks read domain failed.");
                             lwip_close(conn_fd);
                             continue;
                         }
 
                         unsigned short int port;
                         if (socks_read_port(conn_fd, &port) < 0) {
-                            log_message("start_app_loop() Socks read port failed.");
+                            log_message("app_loop() Socks read port failed.");
                             lwip_close(conn_fd);
                             continue;
                         }
 
                         if ((remote_fd = request_connect(SOCKS_ADDR_DOMAINNAME, domain, port)) < 0) {
                             lwip_close(conn_fd);
-                            log_message("start_app_loop() socks request failed.");
+                            log_message("app_loop() socks request failed.");
                             free(domain);
                             continue;
                         }
 
                         if (socks5_domain_send_response(conn_fd, domain, domain_len, port) < 0) {
                             lwip_close(conn_fd);
-                            log_message("start_app_loop() socks request reply failed.");
+                            log_message("app_loop() socks request reply failed.");
                             free(domain);
                             continue;
                         }
@@ -176,7 +176,7 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                     }
 
                     default: {
-                        log_message("start_app_loop() Invalid socks5 command: %d.", command);
+                        log_message("app_loop() Invalid socks5 command: %d.", command);
                         lwip_close(conn_fd);
                         continue;
                     }
@@ -190,21 +190,21 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                     case 1: {
                         unsigned short int p;
                         if (socks_read_port(conn_fd, &p) < 0) {
-                            log_message("start_app_loop() Socks read port failed.");
+                            log_message("app_loop() Socks read port failed.");
                             lwip_close(conn_fd);
                             continue;
                         }
 
                         char *ip;
                         if (socks_read_ip(conn_fd, &ip) < 0) {
-                            log_message("start_app_loop() Socks read ip failed.");
+                            log_message("app_loop() Socks read ip failed.");
                             lwip_close(conn_fd);
                             continue;
                         }
 
                         char ident[255];
                         if (socks4_read_id(conn_fd, ident, sizeof(ident)) < 0) {
-                            log_message("start_app_loop() Socks read ident failed.");
+                            log_message("app_loop() Socks read ident failed.");
                             lwip_close(conn_fd);
                             continue;
                         }
@@ -212,7 +212,7 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                         if (socks4_is_4a(ip)) {
                             char domain[255];
                             if (socks4_read_domain(conn_fd, domain, sizeof(domain)) < 0) {
-                                log_message("start_app_loop() Socks read domain failed.");
+                                log_message("app_loop() Socks read domain failed.");
                                 lwip_close(conn_fd);
                                 continue;
                             }
@@ -221,7 +221,7 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                             if ((remote_fd = request_connect(SOCKS_ADDR_DOMAINNAME, domain, p)) < 0) {
                                 socks4_send_response(conn_fd, 0x5a);
                                 lwip_close(conn_fd);
-                                log_message("start_app_loop() socks request failed.");
+                                log_message("app_loop() socks request failed.");
                                 free(ip);
                                 continue;
                             }
@@ -231,7 +231,7 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                             if ((remote_fd = request_connect(SOCKS_ADDR_IPV4, ip, p)) < 0) {
                                 socks4_send_response(conn_fd, 0x5a);
                                 lwip_close(conn_fd);
-                                log_message("start_app_loop() socks request failed.");
+                                log_message("app_loop() socks request failed.");
                                 free(ip);
                                 continue;
                             }
@@ -244,7 +244,7 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                     }
 
                     default: {
-                        log_message("start_app_loop() Invalid socks4 methods: %d.", methods);
+                        log_message("app_loop() Invalid socks4 methods: %d.", methods);
                         lwip_close(conn_fd);
                         continue;
                     }
@@ -254,7 +254,7 @@ void start_app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
             }
 
             default: {
-                log_message("start_app_loop() Invalid socks version: %d.", version);
+                log_message("app_loop() Invalid socks version: %d.", version);
                 lwip_close(conn_fd);
                 continue;
             }
@@ -271,9 +271,11 @@ int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
     log_output(stdout);
 
-    if (start_lwip_portaudio((uint8_t *) mac, ipaddr, netmask, gateway) < 0) {
+#if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_LWIP
+    if (start_lwip(mac, ipaddr, netmask, gateway) < 0) {
         return -1;
     }
+#endif
 
     crossbar client_crossbar;
     crossbar remote_crossbar;
@@ -307,9 +309,11 @@ int main(int argc, char **argv) {
     start_relay_thread(&client_relay);
     start_relay_thread(&remote_relay);
 
-    start_app_loop(&client_crossbar, &remote_crossbar);
+    app_loop(&client_crossbar, &remote_crossbar);
 
-    stop_lwip_portaudio();
+#if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_LWIP
+    stop_lwip();
+#endif
 
     return 0;
 }

@@ -19,46 +19,46 @@ pthread_mutex_t lwip_init_lock;
 quiet_lwip_portaudio_audio_threads *lwip_audio_threads;
 quiet_lwip_portaudio_interface *lwip_interface;
 
-int start_lwip_portaudio(uint8_t *mac, uint32_t ipaddr, uint32_t netmask, uint32_t gateway) {
+int start_lwip(const uint8_t *mac, uint32_t ipaddr, uint32_t netmask, uint32_t gateway) {
     pthread_mutex_lock(&lwip_init_lock);
 
     if (initialized) {
         pthread_mutex_unlock(&lwip_init_lock);
-        log_message("start_lwip_portaudio() already initialized.");
+        log_message("start_lwip() already initialized.");
         return 0;
     }
 
     PaError err = Pa_Initialize();
     if (err != paNoError) {
-        log_message("start_lwip_portaudio() failed to initialize port audio, %s", Pa_GetErrorText(err));
+        log_message("start_lwip() failed to initialize port audio, %s", Pa_GetErrorText(err));
         pthread_mutex_unlock(&lwip_init_lock);
         return -1;
     }
 
     PaDeviceIndex output_device = Pa_GetDefaultOutputDevice();
     if (output_device == paNoDevice) {
-        log_message("start_lwip_portaudio() failed to get output device.");
+        log_message("start_lwip() failed to get output device.");
         pthread_mutex_unlock(&lwip_init_lock);
         return -1;
     }
 
     PaDeviceIndex input_device = Pa_GetDefaultInputDevice();
     if (input_device == paNoDevice) {
-        log_message("start_lwip_portaudio() failed to get input device.");
+        log_message("start_lwip() failed to get input device.");
         pthread_mutex_unlock(&lwip_init_lock);
         return -1;
     }
 
     const quiet_encoder_options *encoder_opt = quiet_encoder_profile_filename(QUIET_PROFILE_PATH, QUIET_PROFILE);
     if (encoder_opt == NULL) {
-        log_message("start_lwip_portaudio() failed to get encoder profile.");
+        log_message("start_lwip() failed to get encoder profile.");
         pthread_mutex_unlock(&lwip_init_lock);
         return -1;
     }
 
     const quiet_decoder_options *decoder_opt = quiet_decoder_profile_filename(QUIET_PROFILE_PATH, QUIET_PROFILE);
     if (decoder_opt == NULL) {
-        log_message("start_lwip_portaudio() failed to get decoder profile.");
+        log_message("start_lwip() failed to get decoder profile.");
         pthread_mutex_unlock(&lwip_init_lock);
         return -1;
     }
@@ -94,11 +94,11 @@ int start_lwip_portaudio(uint8_t *mac, uint32_t ipaddr, uint32_t netmask, uint32
     return 0;
 }
 
-int stop_lwip_portaudio() {
+int stop_lwip() {
     pthread_mutex_lock(&lwip_init_lock);
 
     if (!initialized) {
-        log_message("stop_lwip_portaudio() not initialized.");
+        log_message("stop_lwip() not initialized.");
         pthread_mutex_unlock(&lwip_init_lock);
         return 0;
     }
@@ -108,7 +108,7 @@ int stop_lwip_portaudio() {
 
     PaError error = Pa_Terminate();
     if (error != paNoError) {
-        log_message("stop_lwip_portaudio() failed to terminate port audio, %s", Pa_GetErrorText(error));
+        log_message("stop_lwip() failed to terminate port audio, %s", Pa_GetErrorText(error));
         pthread_mutex_unlock(&lwip_init_lock);
         return -1;
     }
