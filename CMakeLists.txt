@@ -18,8 +18,8 @@ add_subdirectory(lib/quiet-lwip)
 add_executable(quiet_practice main.c)
 target_link_libraries(quiet_practice quiet_lwip pthread)
 
-add_executable(my_proxy_server proxy_server.c relay.c)
+add_executable(my_proxy_server proxy_server.c relay.c lwip.c util.c socks.c socks4.c socks5.c)
 target_link_libraries(my_proxy_server quiet_lwip)
 
-add_executable(my_proxy_client proxy_client.c relay.c)
+add_executable(my_proxy_client proxy_client.c relay.c lwip.c util.c)
 target_link_libraries(my_proxy_client quiet_lwip)
