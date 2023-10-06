@@ -7,6 +7,8 @@
 
 int socks5_auth(int socket_fd, int methods);
 
+int socks5_auth_not_supported(int socket_fd);
+
 int socks5_auth_reply(int socket_fd);
 
 int socks5_command(int socket_fd, int *command);

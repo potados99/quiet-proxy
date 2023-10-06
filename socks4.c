@@ -31,7 +31,7 @@ int socks4_is_4a(const char *ip) {
 int socks4_send_response(int fd, int status) {
     char response[8] = {0x00, (char) status, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-    if (writen(fd, response, ARRAY_SIZE(response)) < (int)ARRAY_SIZE(response)) {
+    if (writen(fd, response, ARRAY_SIZE(response)) != 0) {
         return -1;
     }
 

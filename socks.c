@@ -17,7 +17,9 @@
 #include <quiet-lwip/lwip-socket.h>
 
 #if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_NATIVE
+
 #include "lwip_mock.h"
+
 #endif
 
 int socks_invitation(int socket_fd, int *version, int *methods) {
@@ -154,31 +156,36 @@ int request_connect(int type, void *buf, unsigned short int port) {
 }
 
 int readn(int fd, void *buf, int n) {
-    int nread, left = n;
+    int nread;
+    int left = n;
+
     while (left > 0) {
-        if ((nread = lwip_read(fd, buf, left)) == -1) {
+        nread = lwip_read(fd, buf, left);
+
+        if (nread == -1) {
             if (errno == EINTR || errno == EAGAIN) {
-                errno = 0; // ignore
+                errno = 0; // just ignore the error.
                 continue;
-            }
-        } else {
-            if (nread == 0) {
-                return 0;
             } else {
-                left -= nread;
-                buf += nread;
+                return -1;
             }
+        } else if (nread == 0) {
+            return 0;
         }
+
+        left -= nread;
+        buf += nread;
     }
+
     return n;
 }
 
-int readnull(int fd, char *buf, int size) {
-    char sym = 0;
-    int nread = 0;
+int readnull(int fd, char *buf, int max) {
+    int nread;
     int i = 0;
+    char sym = 0;
 
-    while (i < size) {
+    while (i < max) {
         nread = lwip_recv(fd, &sym, sizeof(char), 0);
 
         if (nread <= 0) {
@@ -197,20 +204,26 @@ int readnull(int fd, char *buf, int size) {
 }
 
 int writen(int fd, void *buf, int n) {
-    int nwrite, left = n;
+    int nwrite;
+    int left = n;
+
     while (left > 0) {
-        if ((nwrite = lwip_write(fd, buf, left)) == -1) {
+        nwrite = lwip_write(fd, buf, left);
+
+        if (nwrite == -1) {
             if (errno == EINTR || errno == EAGAIN) {
+                errno = 0; // just ignore the error.
                 continue;
-            }
-        } else {
-            if (nwrite == n) {
-                return 0;
             } else {
-                left -= nwrite;
-                buf += nwrite;
+                return -1;
             }
+        } else if (nwrite == n) {
+            return 0;
         }
+
+        left -= nwrite;
+        buf += nwrite;
     }
-    return n;
+
+    return 0;
 }

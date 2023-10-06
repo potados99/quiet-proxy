@@ -102,6 +102,7 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
         switch (version) {
             case SOCKS_VERSION5: {
                 if (socks5_auth(conn_fd, methods) < 0) {
+                    socks5_auth_not_supported(conn_fd);
                     log_message("app_loop() Socks auth failed.");
                     lwip_close(conn_fd);
                     continue;
@@ -201,8 +202,8 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
             case SOCKS_VERSION4: {
                 switch (methods) {
                     case 1: {
-                        unsigned short int p;
-                        if (socks_read_port(conn_fd, &p) < 0) {
+                        unsigned short int port;
+                        if (socks_read_port(conn_fd, &port) < 0) {
                             log_message("app_loop() Socks read port failed.");
                             lwip_close(conn_fd);
                             continue;
@@ -231,7 +232,7 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                             }
                             log_message("Socks4A: ident:%s; domain:%s;", ident, domain);
 
-                            if ((remote_fd = request_connect(SOCKS_ADDR_DOMAINNAME, domain, p)) < 0) {
+                            if ((remote_fd = request_connect(SOCKS_ADDR_DOMAINNAME, domain, port)) < 0) {
                                 socks4_send_response(conn_fd, 0x5a);
                                 lwip_close(conn_fd);
                                 log_message("app_loop() socks request failed.");
@@ -239,9 +240,9 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
                                 continue;
                             }
                         } else {
-                            log_message("Socks4: connect by ip & port", ip, p);
+                            log_message("Socks4: connect by ip & port", ip, port);
 
-                            if ((remote_fd = request_connect(SOCKS_ADDR_IPV4, ip, p)) < 0) {
+                            if ((remote_fd = request_connect(SOCKS_ADDR_IPV4, ip, port)) < 0) {
                                 socks4_send_response(conn_fd, 0x5b);
                                 lwip_close(conn_fd);
                                 log_message("app_loop() socks request failed.");

@@ -19,7 +19,7 @@
  * Proxy server settings
  **********************************************************************************************************************/
 
-#define PROXY_SERVER_LISTENING_INTERFACE INTERFACE_LWIP // change this: INTERFACE_NATIVE or INTERFACE_LWIP
+#define PROXY_SERVER_LISTENING_INTERFACE INTERFACE_NATIVE // change this: INTERFACE_NATIVE or INTERFACE_LWIP
 
 // When you use INTERFACE_NATIVE, you use the following settings.
 #define PROXY_SERVER_NATIVE_LISTENING_ADDRESS "127.0.0.1"
@@ -51,7 +51,7 @@
  * Proxy client settings
  **********************************************************************************************************************/
 
-#define PROXY_CLIENT_REMOTE_INTERFACE INTERFACE_LWIP // change this: INTERFACE_NATIVE or INTERFACE_LWIP
+#define PROXY_CLIENT_REMOTE_INTERFACE INTERFACE_NATIVE // change this: INTERFACE_NATIVE or INTERFACE_LWIP
 
 // Listening side settings.
 #define PROXY_CLIENT_LISTENING_ADDRESS "127.0.0.1"
