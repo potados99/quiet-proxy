@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 
 #define lwip_socket socket
 #define lwip_bind bind

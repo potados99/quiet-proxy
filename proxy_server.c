@@ -3,10 +3,6 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
-#include <netinet/tcp.h>
-
-#include <quiet-lwip-portaudio.h>
-#include <quiet-lwip/lwip-socket.h>
 
 #include "opt.h"
 #include "lwip.h"
@@ -16,17 +12,20 @@
 #include "socks4.h"
 #include "socks5.h"
 
-#if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_NATIVE
-#include "lwip_mock.h"
-#endif
-
-const char *listening_address = PROXY_SERVER_LISTENING_ADDRESS;
-const int listening_port = PROXY_SERVER_LISTENING_PORT;
+#if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_LWIP
+#include <quiet-lwip-portaudio.h>
+#include <quiet-lwip/lwip-socket.h>
 
 const uint8_t *mac = PROXY_SERVER_LWIP_MAC;
 const quiet_lwip_ipv4_addr ipaddr = PROXY_SERVER_LWIP_ADDRESS_U32;
 const quiet_lwip_ipv4_addr netmask = PROXY_SERVER_LWIP_NETMASK_U32;
 const quiet_lwip_ipv4_addr gateway = PROXY_SERVER_LWIP_GATEWAY_U32;
+#elif PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_NATIVE
+#include "lwip_mock.h"
+#endif
+
+const char *listening_address = PROXY_SERVER_LISTENING_ADDRESS;
+const int listening_port = PROXY_SERVER_LISTENING_PORT;
 
 int open_recv(const char *addr) {
     int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, 0);

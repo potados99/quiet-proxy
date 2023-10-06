@@ -3,23 +3,28 @@ project(quiet_practice C)
 
 set(CMAKE_C_STANDARD 11)
 
-# PortAudio가 제대로 빌드되려면 이 플래그가 필요합니다.
-# 더불어 PortAudio의 CMakeLists.txt에서 _WIN32 전처리기 매크로를 선언하였습니다.
-set(WIN32 1)
-
 add_subdirectory(lib/jansson)
 add_subdirectory(lib/libfec)
-add_subdirectory(lib/libsndfile)
 add_subdirectory(lib/portaudio)
 add_subdirectory(lib/quiet-dsp)
 add_subdirectory(lib/libquiet)
 add_subdirectory(lib/quiet-lwip)
 
-add_executable(quiet_practice main.c)
-target_link_libraries(quiet_practice quiet_lwip pthread)
+set(server_src proxy_server.c relay.c util.c socks.c socks4.c socks5.c)
+set(client_src proxy_client.c relay.c util.c)
 
-add_executable(my_proxy_server proxy_server.c relay.c lwip.c util.c socks.c socks4.c socks5.c)
-target_link_libraries(my_proxy_server quiet_lwip)
+add_executable(proxy_server_lwip ${server_src} lwip.c)
+target_link_libraries(proxy_server_lwip quiet_lwip)
 
-add_executable(my_proxy_client proxy_client.c relay.c lwip.c util.c)
-target_link_libraries(my_proxy_client quiet_lwip)
+add_executable(proxy_client_lwip ${client_src} lwip.c)
+target_link_libraries(proxy_client_lwip quiet_lwip)
+
+add_custom_target(proxy_lwip DEPENDS proxy_server_lwip proxy_client_lwip)
+
+add_executable(proxy_server_native ${server_src})
+target_compile_definitions(proxy_server_native PRIVATE LOCAL_TEST)
+
+add_executable(proxy_client_native ${client_src})
+target_compile_definitions(proxy_client_native PRIVATE LOCAL_TEST)
+
+add_custom_target(proxy_native DEPENDS proxy_server_native proxy_client_native)

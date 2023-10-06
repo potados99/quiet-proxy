@@ -1,31 +1,31 @@
 #include <unistd.h>
-#include <string.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
 
-#include <quiet-lwip-portaudio.h>
-#include <quiet-lwip/lwip-socket.h>
-
 #include "opt.h"
-#include "relay.h"
 #include "lwip.h"
 #include "util.h"
+#include "relay.h"
 
-#if PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_NATIVE
-#include "lwip_mock.h"
-#endif
-
-const char *listening_address = PROXY_CLIENT_LISTENING_ADDRESS;
-const int listening_port = PROXY_CLIENT_LISTENING_PORT;
-const char *remote_address = PROXY_CLIENT_REMOTE_ADDRESS;
-const int remote_port = PROXY_CLIENT_REMOTE_PORT;
+#if PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_LWIP
+#include <quiet-lwip-portaudio.h>
+#include <quiet-lwip/lwip-socket.h>
 
 const uint8_t *mac = PROXY_CLIENT_LWIP_MAC;
 const quiet_lwip_ipv4_addr ipaddr = PROXY_CLIENT_LWIP_ADDRESS_U32;
 const quiet_lwip_ipv4_addr netmask = PROXY_CLIENT_LWIP_NETMASK_U32;
 const quiet_lwip_ipv4_addr gateway = PROXY_CLIENT_LWIP_GATEWAY_U32;
+#elif PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_NATIVE
+#include "lwip_mock.h"
+#endif
+
+const char *listening_address = PROXY_CLIENT_LISTENING_ADDRESS;
+const int listening_port = PROXY_CLIENT_LISTENING_PORT;
+
+const char *remote_address = PROXY_CLIENT_REMOTE_ADDRESS;
+const int remote_port = PROXY_CLIENT_REMOTE_PORT;
 
 int open_send(const char *addr, int port) {
     int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, 0);

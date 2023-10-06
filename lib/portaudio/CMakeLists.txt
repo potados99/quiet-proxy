@@ -6,6 +6,9 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
+# PortAudio가 cygwin에서 제대로 빌드되려면 이 플래그가 필요합니다.
+# 더불어 _WIN32 전처리기 매크로를 선언하였습니다.
+set(WIN32 1)
 SET(PA_PRIVATE_COMPILE_DEFINITIONS ${PA_PRIVATE_COMPILE_DEFINITIONS} _WIN32 COBJMACROS)
 
 # Check if the user is building PortAudio stand-alone or as part of a larger

@@ -13,13 +13,12 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/select.h>
+
+#if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_LWIP
 #include <quiet-lwip-portaudio.h>
 #include <quiet-lwip/lwip-socket.h>
-
-#if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_NATIVE
-
+#elif PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_NATIVE
 #include "lwip_mock.h"
-
 #endif
 
 int socks_invitation(int socket_fd, int *version, int *methods) {
