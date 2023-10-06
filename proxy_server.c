@@ -16,7 +16,9 @@
 #include "socks4.h"
 #include "socks5.h"
 
+#if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_NATIVE
 #include "lwip_mock.h"
+#endif
 
 const char *listening_address = PROXY_SERVER_LISTENING_ADDRESS;
 const int listening_port = PROXY_SERVER_LISTENING_PORT;

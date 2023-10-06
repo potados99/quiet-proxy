@@ -7,11 +7,6 @@
 
 #include "opt.h"
 
-// If we use native socket on proxy server for
-// listening on incoming connections, we mock
-// lwip functions and types with native ones.
-#if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_NATIVE
-
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -34,7 +29,5 @@
 
 #define lwip_sockaddr_in sockaddr_in
 #define lwip_sockaddr sockaddr
-
-#endif
 
 #endif //QUIET_PRACTICE_MOCK_H

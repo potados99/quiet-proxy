@@ -9,6 +9,13 @@
 #define QUIET_PROFILE  "cable-64k"
 
 /***********************************************************************************************************************
+ * Constants: DO NOT CHANGE
+ **********************************************************************************************************************/
+
+#define INTERFACE_NATIVE 1
+#define INTERFACE_LWIP 2
+
+/***********************************************************************************************************************
  * Proxy server settings
  **********************************************************************************************************************/
 
@@ -44,12 +51,19 @@
  * Proxy client settings
  **********************************************************************************************************************/
 
+#define PROXY_CLIENT_REMOTE_INTERFACE INTERFACE_LWIP // change this: INTERFACE_NATIVE or INTERFACE_LWIP
+
 // Listening side settings.
+#define PROXY_CLIENT_LISTENING_ADDRESS "127.0.0.1"
 #define PROXY_CLIENT_LISTENING_PORT 2160
 
-// Remote(maybe the proxy server?) settings.
-#define PROXY_CLIENT_REMOTE_ADDRESS PROXY_SERVER_LISTENING_ADDRESS
-#define PROXY_CLIENT_REMOTE_PORT PROXY_SERVER_LISTENING_PORT
+// When you use INTERFACE_NATIVE, you use the following settings.
+#define PROXY_CLIENT_NATIVE_REMOTE_ADDRESS PROXY_SERVER_NATIVE_LISTENING_ADDRESS
+#define PROXY_CLIENT_NATIVE_REMOTE_PORT PROXY_SERVER_NATIVE_LISTENING_PORT
+
+// When you use INTERFACE_LWIP, you use the following settings.
+#define PROXY_CLIENT_LWIP_REMOTE_ADDRESS PROXY_SERVER_LWIP_LISTENING_ADDRESS
+#define PROXY_CLIENT_LWIP_REMOTE_PORT PROXY_SERVER_LWIP_LISTENING_PORT
 
 // This is a setting for the lwip interface.
 #define PROXY_CLIENT_LWIP_ADDRESS_U32 0xc0a80002;   // 192.168.0.2
@@ -57,11 +71,15 @@
 #define PROXY_CLIENT_LWIP_GATEWAY_U32 0xc0a80001;  // 192.168.0.1
 #define PROXY_CLIENT_LWIP_MAC (uint8_t[]){0x01, 0x02, 0x03, 0x04, 0x05, 0x07}
 
-/***********************************************************************************************************************
- * Constants: DO NOT CHANGE
- **********************************************************************************************************************/
-
-#define INTERFACE_NATIVE 1
-#define INTERFACE_LWIP 2
+// These values are automatically set according to the above settings.
+#if PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_NATIVE
+#define PROXY_CLIENT_REMOTE_ADDRESS PROXY_CLIENT_NATIVE_REMOTE_ADDRESS
+#define PROXY_CLIENT_REMOTE_PORT PROXY_CLIENT_NATIVE_REMOTE_PORT
+#elif PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_LWIP
+#define PROXY_CLIENT_REMOTE_ADDRESS PROXY_SERVER_LWIP_LISTENING_ADDRESS
+#define PROXY_CLIENT_REMOTE_PORT PROXY_SERVER_LWIP_LISTENING_PORT
+#else
+#error "PROXY_CLIENT_REQUESTING_INTERFACE must be INTERFACE_NATIVE or INTERFACE_LWIP"
+#endif
 
 #endif //QUIET_PRACTICE_OPT_H

@@ -13,7 +13,11 @@
 #include "lwip.h"
 #include "util.h"
 
-const char *listening_address = "127.0.0.1";
+#if PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_NATIVE
+#include "lwip_mock.h"
+#endif
+
+const char *listening_address = PROXY_CLIENT_LISTENING_ADDRESS;
 const int listening_port = PROXY_CLIENT_LISTENING_PORT;
 const char *remote_address = PROXY_CLIENT_REMOTE_ADDRESS;
 const int remote_port = PROXY_CLIENT_REMOTE_PORT;
@@ -38,6 +42,7 @@ int open_send(const char *addr, int port) {
     int res = lwip_connect(socket_fd, (struct lwip_sockaddr *) &remote, sizeof(remote));
     if (res < 0) {
         log_message("open_send() Connect failed.");
+        return -1;
     }
 
     return socket_fd;
@@ -112,9 +117,11 @@ int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
     log_output(stdout);
 
-    if (start_lwip((uint8_t *) mac, ipaddr, netmask, gateway) < 0) {
+#if PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_LWIP
+    if (start_lwip(mac, ipaddr, netmask, gateway) < 0) {
         return -1;
     }
+#endif
 
     crossbar client_crossbar;
     crossbar remote_crossbar;
@@ -129,6 +136,8 @@ int main(int argc, char **argv) {
             .read = read,
             .write = write,
             .select = select,
+            .close = close,
+            .other_close = lwip_close,
             .other_shutdown = lwip_shutdown,
             .get_errno = native_errno,
     };
@@ -141,6 +150,8 @@ int main(int argc, char **argv) {
             .read = (ssize_t (*)(int, void *, size_t)) lwip_read,
             .write = (ssize_t (*)(int, const void *, size_t)) lwip_write,
             .select = lwip_select,
+            .close = lwip_close,
+            .other_close = close,
             .other_shutdown = shutdown,
             .get_errno = lwip_errno,
     };
@@ -150,7 +161,9 @@ int main(int argc, char **argv) {
 
     app_loop(&client_crossbar, &remote_crossbar);
 
+#if PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_LWIP
     stop_lwip();
+#endif
 
     return 0;
 }
