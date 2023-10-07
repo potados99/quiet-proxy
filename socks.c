@@ -108,30 +108,41 @@ static int _connect(int type, void *buf, unsigned short int port) {
 
         case SOCKS_ADDR_DOMAINNAME: {
             char portaddr[6];
-            struct addrinfo *res;
+            struct addrinfo *res = NULL;
             snprintf(portaddr, ARRAY_SIZE(portaddr), "%d", port);
 
             log_message("getaddrinfo: %s %s", (char *) buf, portaddr);
 
-            int ret = getaddrinfo((char *) buf, portaddr, NULL, &res);
-            if (ret == EAI_NODATA) {
+            struct addrinfo hints;
+            memset(&hints, 0, sizeof(hints));
+            hints.ai_family = PF_INET;
+            hints.ai_flags = AI_PASSIVE;
+            hints.ai_socktype = SOCK_STREAM;
+
+            int ret = getaddrinfo((char *) buf, portaddr, &hints, &res);
+            if (ret != 0) {
+                log_message("request_connect() getaddrinfo failed: %s.", gai_strerror(ret));
+                if (res) {
+                    freeaddrinfo(res);
+                }
                 return -1;
-            } else if (ret == 0) {
-                struct addrinfo *r;
-                for (r = res; r != NULL; r = r->ai_next) {
-                    fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-                    if (fd == -1) {
-                        continue;
-                    }
-                    ret = connect(fd, r->ai_addr, r->ai_addrlen);
-                    if (ret == 0) {
-                        freeaddrinfo(res);
-                        return fd;
-                    } else {
-                        close(fd);
-                    }
+            }
+
+            struct addrinfo *r;
+            for (r = res; r != NULL; r = r->ai_next) {
+                fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+                if (fd == -1) {
+                    continue;
+                }
+                ret = connect(fd, r->ai_addr, r->ai_addrlen);
+                if (ret == 0) {
+                    freeaddrinfo(res);
+                    return fd;
+                } else {
+                    close(fd);
                 }
             }
+
             freeaddrinfo(res);
             return -1;
         }
