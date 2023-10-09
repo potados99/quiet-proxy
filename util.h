@@ -10,6 +10,7 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
 void log_output(FILE *file);
+void log_info(const char *message, ...);
 void log_message(const char *message, ...);
 
 #endif //QUIET_PRACTICE_UTIL_H

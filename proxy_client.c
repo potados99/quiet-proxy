@@ -22,10 +22,10 @@ const quiet_lwip_ipv4_addr gateway = PROXY_CLIENT_LWIP_GATEWAY_U32;
 #endif
 
 const char *listening_address = PROXY_CLIENT_LISTENING_ADDRESS;
-const int listening_port = PROXY_CLIENT_LISTENING_PORT;
+int listening_port = PROXY_CLIENT_LISTENING_PORT;
 
 const char *remote_address = PROXY_CLIENT_REMOTE_ADDRESS;
-const int remote_port = PROXY_CLIENT_REMOTE_PORT;
+int remote_port = PROXY_CLIENT_REMOTE_PORT;
 
 int open_send(const char *addr, int port) {
     int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, 0);
@@ -83,6 +83,10 @@ int recv_connection(int socket_fd, struct sockaddr_in *recv_from) {
 }
 
 int app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
+    log_info("Listening on %s %s:%d, will forward connection to %s %s:%d",
+             "INTERFACE_NATIVE", listening_address, listening_port,
+             PROXY_CLIENT_REMOTE_INTERFACE_STR, remote_address, remote_port);
+
     int recv_socket = open_recv(listening_address);
     if (recv_socket < 0) {
         log_message("app_loop() couldn't open socket for listening.");
@@ -113,9 +117,27 @@ int app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
     }
 }
 
+void handle_arguments(int argc, char **argv) {
+    if (argc > 1) {
+        int listening_portnum = atoi(argv[1]);
+        if (listening_portnum > 0 && listening_portnum < 65536) {
+            listening_port = listening_portnum;
+        }
+    }
+
+    if (argc > 2) {
+        int remote_portnum = atoi(argv[2]);
+        if (remote_portnum > 0 && remote_portnum < 65536) {
+            remote_port = remote_portnum;
+        }
+    }
+}
+
 int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
     log_output(stdout);
+
+    handle_arguments(argc, argv);
 
 #if PROXY_CLIENT_REMOTE_INTERFACE == INTERFACE_LWIP
     if (start_lwip(mac, ipaddr, netmask, gateway) < 0) {

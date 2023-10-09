@@ -25,7 +25,7 @@ const quiet_lwip_ipv4_addr gateway = PROXY_SERVER_LWIP_GATEWAY_U32;
 #endif
 
 const char *listening_address = PROXY_SERVER_LISTENING_ADDRESS;
-const int listening_port = PROXY_SERVER_LISTENING_PORT;
+int listening_port = PROXY_SERVER_LISTENING_PORT;
 
 int open_recv(const char *addr) {
     int socket_fd = lwip_socket(AF_INET, SOCK_STREAM, 0);
@@ -70,6 +70,9 @@ int recv_connection(int socket_fd, struct lwip_sockaddr_in *recv_from) {
 }
 
 void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
+    log_info("Listening on %s %s:%d",
+             PROXY_SERVER_LISTENING_INTERFACE_STR, listening_address, listening_port);
+
     int recv_socket = open_recv(listening_address);
     if (recv_socket < 0) {
         log_message("app_loop() couldn't open socket for listening.");
@@ -280,9 +283,20 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
     }
 }
 
+void handle_arguments(int argc, char **argv) {
+    if (argc > 1) {
+        int portnum = atoi(argv[1]);
+        if (portnum > 0 && portnum < 65536) {
+            listening_port = portnum;
+        }
+    }
+}
+
 int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
     log_output(stdout);
+
+    handle_arguments(argc, argv);
 
 #if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_LWIP
     if (start_lwip(mac, ipaddr, netmask, gateway) < 0) {

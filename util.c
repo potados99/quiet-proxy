@@ -19,6 +19,25 @@ void log_output(FILE *file) {
     log_file = file;
 }
 
+void log_info(const char *message, ...) {
+    char vbuffer[255];
+    va_list args;
+    va_start(args, message);
+    vsnprintf(vbuffer, ARRAY_SIZE(vbuffer), message, args);
+    va_end(args);
+
+    time_t now;
+    time(&now);
+    char *date = ctime(&now);
+    date[strlen(date) - 1] = '\0';
+
+    pthread_t self = pthread_self();
+
+    fprintf(log_file, "[%s][%lu] Info: %s\n", date, self, vbuffer);
+
+    fflush(log_file);
+}
+
 void log_message(const char *message, ...) {
     char vbuffer[255];
     va_list args;
