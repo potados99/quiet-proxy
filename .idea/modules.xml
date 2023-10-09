@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/quiet-practice.iml" filepath="$PROJECT_DIR$/.idea/quiet-practice.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/quiet-proxy.iml" filepath="$PROJECT_DIR$/.idea/quiet-proxy.iml" />
     </modules>
   </component>
 </project>
