@@ -52,6 +52,7 @@ int native_errno();
 int lwip_errno();
 
 typedef struct {
+    const char *name;
     int agent;
     int other_agent;
     crossbar *incoming;

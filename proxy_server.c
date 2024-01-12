@@ -310,6 +310,7 @@ int main(int argc, char **argv) {
     crossbar_init(&remote_crossbar);
 
     relay_t client_relay = {
+            .name = "Client relay(LWIP, proxy_client facing)",
             .agent = agent_lwip,
             .other_agent = agent_native,
             .incoming = &client_crossbar,
@@ -324,6 +325,7 @@ int main(int argc, char **argv) {
     };
 
     relay_t remote_relay = {
+            .name = "Remote relay(Native, Internet facing)",
             .agent = agent_native,
             .other_agent = agent_lwip,
             .incoming = &remote_crossbar,
