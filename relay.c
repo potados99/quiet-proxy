@@ -191,6 +191,7 @@ void *relay(void *v_relay) {
                     crossbar_add_for_writing(relay->outgoing, relay_read[i], read_res);
                 } else if (read_res == 0) {
                     // eof
+                    log_message("Got EOF while writing.");
                     relay->other_shutdown(relay_conn_fd(relay_read[i], relay->other_agent), SHUT_WR);
                     relay_conn_close(relay_read[i], relay);
                 } else {
@@ -199,6 +200,7 @@ void *relay(void *v_relay) {
                         relay_read[new_read_len] = relay_read[i];
                         new_read_len++;
                     } else {
+                        log_message("Error happened while reading.");
                         relay->other_shutdown(relay_conn_fd(relay_read[i], relay->other_agent), SHUT_WR);
                         relay_conn_close(relay_read[i], relay);
                     }
@@ -236,6 +238,7 @@ void *relay(void *v_relay) {
                     }
                 } else if (write_res == 0) {
                     // eof
+                    log_message("Got EOF while writing.");
                     relay->other_shutdown(relay_conn_fd(relay_write[i], relay->other_agent), SHUT_RD);
                     relay_conn_close(relay_write[i], relay);
                 } else {
@@ -245,6 +248,7 @@ void *relay(void *v_relay) {
                         write_len[new_write_len] = write_len[i];
                         new_write_len++;
                     } else {
+                        log_message("Error happened while writing.");
                         relay->other_shutdown(relay_conn_fd(relay_write[i], relay->other_agent), SHUT_RD);
                         relay_conn_close(relay_write[i], relay);
                     }
