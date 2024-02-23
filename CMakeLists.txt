@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.26)
 project(quiet_practice C)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -O0")
 
 add_subdirectory(lib/jansson)
 add_subdirectory(lib/libfec)
