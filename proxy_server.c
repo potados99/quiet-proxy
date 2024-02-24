@@ -69,7 +69,7 @@ int recv_connection(int socket_fd, struct lwip_sockaddr_in *recv_from) {
     return conn_fd;
 }
 
-void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
+void app_loop() {
     log_info("Listening on %s %s:%d",
              PROXY_SERVER_LISTENING_INTERFACE_STR, listening_address, listening_port);
 
@@ -276,10 +276,23 @@ void app_loop(crossbar *client_crossbar, crossbar *remote_crossbar) {
             }
         }
 
-        relay_conn *conn = relay_conn_create(remote_fd, conn_fd, 1 << 13);
+        side_t this_side = {
+                .fd = conn_fd,
+                .read = (ssize_t (*)(int, void *, size_t)) lwip_read,
+                .write = (ssize_t (*)(int, const void *, size_t)) lwip_write,
+                .select = lwip_select,
+                .close = lwip_close
+        };
 
-        crossbar_add_for_reading(client_crossbar, conn);
-        crossbar_add_for_reading(remote_crossbar, conn);
+        side_t other_side = {
+                .fd = remote_fd,
+                .read = read,
+                .write = write,
+                .select = select,
+                .close = close
+        };
+
+        start_threads(&this_side, &other_side);
     }
 }
 
@@ -304,45 +317,7 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    crossbar client_crossbar;
-    crossbar remote_crossbar;
-    crossbar_init(&client_crossbar);
-    crossbar_init(&remote_crossbar);
-
-    relay_t client_relay = {
-            .name = "Client relay(LWIP, proxy_client facing)",
-            .agent = agent_lwip,
-            .other_agent = agent_native,
-            .incoming = &client_crossbar,
-            .outgoing = &remote_crossbar,
-            .read = (ssize_t (*)(int, void *, size_t)) lwip_read,
-            .write = (ssize_t (*)(int, const void *, size_t)) lwip_write,
-            .select = lwip_select,
-            .close = lwip_close,
-            .other_close = close,
-            .other_shutdown = shutdown,
-            .get_errno = lwip_errno,
-    };
-
-    relay_t remote_relay = {
-            .name = "Remote relay(Native, Internet facing)",
-            .agent = agent_native,
-            .other_agent = agent_lwip,
-            .incoming = &remote_crossbar,
-            .outgoing = &client_crossbar,
-            .read = read,
-            .write = write,
-            .select = select,
-            .close = close,
-            .other_close = lwip_close,
-            .other_shutdown = lwip_shutdown,
-            .get_errno = native_errno,
-    };
-
-    start_relay_thread(&client_relay);
-    start_relay_thread(&remote_relay);
-
-    app_loop(&client_crossbar, &remote_crossbar);
+    app_loop();
 
 #if PROXY_SERVER_LISTENING_INTERFACE == INTERFACE_LWIP
     stop_lwip();
