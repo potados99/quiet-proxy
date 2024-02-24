@@ -33,11 +33,8 @@ typedef struct {
     side_t *to;
 } pair_t;
 
-void *relay_loop(void *sides);
-
 void start_threads(side_t *this_side, side_t *other_side);
 
-side_t *create_side(const char *name, int fd, ssize_t (*read)(int, void *, size_t),
-                    ssize_t (*write)(int, const void *, size_t),
-                    int (*select)(int, fd_set *, fd_set *, fd_set *, struct timeval *),
-                    int (*close)(int), int (*shutdown)(int, int));
+void *relay_loop(void *sides);
+
+void teardown(side_t *one, side_t *another);

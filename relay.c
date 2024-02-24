@@ -2,24 +2,36 @@
 
 #include "util.h"
 
-static void teardown(side_t *one, side_t *another) {
-    one->ready_to_close = 1;
-    if (another->ready_to_close) {
-        log_message("Teardown: Both sides are ready to close. Closing.");
+static int threads = 0;
+static pthread_mutex_t teardown_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-        one->close(one->fd);
-        another->close(another->fd);
+void start_threads(side_t *this_side, side_t *other_side) {
+    side_t *this_side_copy = malloc(sizeof(side_t));
+    memcpy(this_side_copy, this_side, sizeof(side_t));
 
-        free(one);
-        free(another);
+    side_t *other_side_copy = malloc(sizeof(side_t));
+    memcpy(other_side_copy, other_side, sizeof(side_t));
 
-        return;
-    }
+    pair_t *from_this_to_other = malloc(sizeof(pair_t));
+    from_this_to_other->from = this_side_copy;
+    from_this_to_other->to = other_side_copy;
 
-    another->shutdown(another->fd, SHUT_WR);
+    pair_t *from_other_to_this = malloc(sizeof(pair_t));
+    from_other_to_this->from = other_side_copy;
+    from_other_to_this->to = this_side_copy;
+
+    pthread_t other_facing_thread;
+    pthread_create(&other_facing_thread, NULL, relay_loop, (void *) from_this_to_other);
+
+    pthread_t this_facing_thread;
+    pthread_create(&this_facing_thread, NULL, relay_loop, (void *) from_other_to_this);
+
+    log_message("Running threads: %d", threads);
 }
 
 void *relay_loop(void *pair) {
+    threads++;
+
     pair_t sides = *((pair_t *) pair);
     free(pair);
 
@@ -31,8 +43,6 @@ void *relay_loop(void *pair) {
     ssize_t nread;
     ssize_t nwritten;
     fd_set fd_set_one;
-
-    log_message("Relay thread started. Entering loop.");
 
     while (1) {
         FD_ZERO(&fd_set_one);
@@ -70,29 +80,32 @@ void *relay_loop(void *pair) {
         }
     }
 
-    log_info("Relay thread exiting.");
+    threads--;
 
     return NULL;
 }
 
-void start_threads(side_t *this_side, side_t *other_side) {
-    side_t *this_side_copy = malloc(sizeof(side_t));
-    memcpy(this_side_copy, this_side, sizeof(side_t));
+void teardown(side_t *one, side_t *another) {
+    pthread_mutex_lock(&teardown_mutex);
 
-    side_t *other_side_copy = malloc(sizeof(side_t));
-    memcpy(other_side_copy, other_side, sizeof(side_t));
+    // I'm ready.
+    one->ready_to_close = 1;
 
-    pair_t *from_this_to_other = malloc(sizeof(pair_t));
-    from_this_to_other->from = this_side_copy;
-    from_this_to_other->to = other_side_copy;
+    // If the other side is ready, close both sides.
+    if (another->ready_to_close) {
+        log_message("Teardown: Both sides are ready to close. Closing.");
 
-    pair_t *from_other_to_this = malloc(sizeof(pair_t));
-    from_other_to_this->from = other_side_copy;
-    from_other_to_this->to = this_side_copy;
+        one->close(one->fd);
+        another->close(another->fd);
 
-    pthread_t other_facing_thread;
-    pthread_create(&other_facing_thread, NULL, relay_loop, (void *) from_this_to_other);
+        free(one);
+        free(another);
+    } else {
+        // If the other side is not ready, shutdown the write end.
+        // This will cause the other side to get an EOF.
+        // This will cause the other side to be ready to close.
+        another->shutdown(another->fd, SHUT_WR);
+    }
 
-    pthread_t this_facing_thread;
-    pthread_create(&this_facing_thread, NULL, relay_loop, (void *) from_other_to_this);
+    pthread_mutex_unlock(&teardown_mutex);
 }
