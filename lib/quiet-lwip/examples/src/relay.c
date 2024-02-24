@@ -42,7 +42,7 @@ size_t relay_conn_write_buflen(const relay_conn *conn, int agent) {
 }
 
 void relay_conn_destroy(relay_conn *conn) {
-    printf("destroying relay connection\n");
+    printf("destroying relay_loop connection\n");
     for (size_t i = 0; i < 2; i++) {
         free(conn->bufs[i]);
     }
@@ -110,8 +110,8 @@ ssize_t _lwip_write(int desc, const void *buf, size_t nbytes) {
     return (ssize_t)(lwip_write(desc, buf, nbytes));
 }
 
-void *relay(void *v_relay) {
-    relay_t *relay = (relay_t*)v_relay;
+void *relay_loop(void *v_relay) {
+    relay_t *relay = (relay_t*)pair;
 
     relay_conn *relay_read[num_relays];
     relay_conn *relay_write[num_relays];
@@ -270,7 +270,7 @@ void *relay(void *v_relay) {
 
 pthread_t start_relay_thread(relay_t *relay_obj) {
     pthread_t relay_thread;
-    pthread_create(&relay_thread, NULL, relay, relay_obj);
+    pthread_create(&relay_thread, NULL, relay_loop, relay_obj);
 
     return relay_thread;
 }

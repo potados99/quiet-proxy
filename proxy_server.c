@@ -57,7 +57,7 @@ int open_recv(const char *addr) {
 }
 
 int recv_connection(int socket_fd, struct lwip_sockaddr_in *recv_from) {
-    int recv_from_len = sizeof(*recv_from);
+    uint32_t recv_from_len = sizeof(struct lwip_sockaddr_in);
 
     int conn_fd = lwip_accept(socket_fd, (struct lwip_sockaddr *) recv_from, &recv_from_len);
     if (conn_fd < 0) {
@@ -69,7 +69,7 @@ int recv_connection(int socket_fd, struct lwip_sockaddr_in *recv_from) {
     return conn_fd;
 }
 
-void app_loop() {
+_Noreturn void app_loop() {
     log_info("Listening on %s %s:%d",
              PROXY_SERVER_LISTENING_INTERFACE_STR, listening_address, listening_port);
 
@@ -80,7 +80,7 @@ void app_loop() {
     }
 
     while (1) {
-        int remote_fd = -1;
+        int remote_fd;
 
         struct lwip_sockaddr_in recv_from;
         int conn_fd = recv_connection(recv_socket, &recv_from);
@@ -146,6 +146,8 @@ void app_loop() {
                             continue;
                         }
 
+                        log_message("Connected to remote: %s", ip);
+
                         if (socks5_ip_send_response(conn_fd, ip, port) < 0) {
                             lwip_close(conn_fd);
                             log_message("app_loop() socks request reply failed.");
@@ -179,6 +181,8 @@ void app_loop() {
                             free(domain);
                             continue;
                         }
+
+                        log_message("Connected to remote: %s", domain);
 
                         if (socks5_domain_send_response(conn_fd, domain, domain_len, port) < 0) {
                             lwip_close(conn_fd);
@@ -277,20 +281,28 @@ void app_loop() {
         }
 
         side_t this_side = {
+                .name = "lwip side(talks with lwip proxy client on other host)",
                 .fd = conn_fd,
                 .read = (ssize_t (*)(int, void *, size_t)) lwip_read,
                 .write = (ssize_t (*)(int, const void *, size_t)) lwip_write,
                 .select = lwip_select,
-                .close = lwip_close
+                .close = lwip_close,
+                .shutdown = lwip_shutdown,
+                .ready_to_close = 0
         };
 
         side_t other_side = {
+                .name = "native side(talks with the Internet)",
                 .fd = remote_fd,
                 .read = read,
                 .write = write,
                 .select = select,
-                .close = close
+                .close = close,
+                .shutdown = shutdown,
+                .ready_to_close = 0
         };
+
+        log_message("Starting relay threads with this connection pair.");
 
         start_threads(&this_side, &other_side);
     }

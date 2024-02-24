@@ -79,11 +79,12 @@ int open_recv(const char *addr) {
 }
 
 int recv_connection(int socket_fd, struct sockaddr_in *recv_from) {
-    socklen_t recv_from_len = sizeof(recv_from);
+    socklen_t recv_from_len = sizeof(struct sockaddr_in);
+
     return accept(socket_fd, (struct sockaddr *) recv_from, &recv_from_len);
 }
 
-int app_loop() {
+_Noreturn int app_loop() {
     log_info("Listening on %s %s:%d, will forward connection to %s %s:%d",
              "INTERFACE_NATIVE", listening_address, listening_port,
              PROXY_CLIENT_REMOTE_INTERFACE_STR, remote_address, remote_port);
@@ -111,23 +112,31 @@ int app_loop() {
             continue;
         }
 
+        log_message("Connected to remote: %s", remote_address);
+
         side_t this_side = {
+                .name = "native side(talks with browser)",
                 .fd = conn_fd,
                 .read = read,
                 .write = write,
                 .select = select,
-                .close = close
+                .close = close,
+                .shutdown = shutdown,
+                .ready_to_close = 0
         };
 
         side_t other_side = {
+                .name = "lwip side(talks with lwip proxy server on other host)",
                 .fd = remote_fd,
                 .read = (ssize_t (*)(int, void *, size_t)) lwip_read,
                 .write = (ssize_t (*)(int, const void *, size_t)) lwip_write,
                 .select = lwip_select,
-                .close = lwip_close
+                .close = lwip_close,
+                .shutdown = lwip_shutdown,
+                .ready_to_close = 0
         };
 
-        log_message("Starting relay threads.");
+        log_message("Starting relay threads with this connection pair.");
 
         start_threads(&this_side, &other_side);
     }
