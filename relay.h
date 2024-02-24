@@ -12,8 +12,8 @@
 #include <stdatomic.h>
 
 typedef struct {
-    const char *name;
     int fd;
+    const char *name;
     volatile int ready_to_close;
 
     ssize_t (*read)(int desc, void *buf, size_t nbytes);

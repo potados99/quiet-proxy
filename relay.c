@@ -6,12 +6,17 @@ static int threads = 0;
 static pthread_mutex_t teardown_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void start_threads(side_t *this_side, side_t *other_side) {
+    // We need to heap copy the sides because they must be shared between threads.
     side_t *this_side_copy = malloc(sizeof(side_t));
     memcpy(this_side_copy, this_side, sizeof(side_t));
 
     side_t *other_side_copy = malloc(sizeof(side_t));
     memcpy(other_side_copy, other_side, sizeof(side_t));
 
+    // These are just a struct to pass the sides to the threads.
+    // Note that these also need to be heap allocated:
+    // accessing stack memory from another thread is undefined behavior.
+    // The threads will free them when they receive them.
     pair_t *from_this_to_other = malloc(sizeof(pair_t));
     from_this_to_other->from = this_side_copy;
     from_this_to_other->to = other_side_copy;
@@ -20,17 +25,18 @@ void start_threads(side_t *this_side, side_t *other_side) {
     from_other_to_this->from = other_side_copy;
     from_other_to_this->to = this_side_copy;
 
+    // We use two threads per connection.
+    // Why? It is because we can't use select() for both lwip and native sockets at the same time.
+    // So instead of using select() with two sockets, we use two threads to listen to each of them.
     pthread_t other_facing_thread;
     pthread_create(&other_facing_thread, NULL, relay_loop, (void *) from_this_to_other);
 
     pthread_t this_facing_thread;
     pthread_create(&this_facing_thread, NULL, relay_loop, (void *) from_other_to_this);
-
-    log_message("Running threads: %d", threads);
 }
 
 void *relay_loop(void *pair) {
-    threads++;
+    log_message("Running threads: %d", ++threads);
 
     pair_t sides = *((pair_t *) pair);
     free(pair);
@@ -80,12 +86,15 @@ void *relay_loop(void *pair) {
         }
     }
 
-    threads--;
+    log_message("Running threads: %d", --threads);
 
     return NULL;
 }
 
 void teardown(side_t *one, side_t *another) {
+    // Only one teardown at a time.
+    // There might be a chance that both sides are ready to close at the same time.
+    // In that case, we don't want to close both sides twice.
     pthread_mutex_lock(&teardown_mutex);
 
     // I'm ready.

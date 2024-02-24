@@ -281,8 +281,8 @@ _Noreturn void app_loop() {
         }
 
         side_t this_side = {
-                .name = "lwip side(talks with lwip proxy client on other host)",
                 .fd = conn_fd,
+                .name = "lwip side(talks with lwip proxy client on other host)",
                 .read = (ssize_t (*)(int, void *, size_t)) lwip_read,
                 .write = (ssize_t (*)(int, const void *, size_t)) lwip_write,
                 .select = lwip_select,
@@ -292,8 +292,8 @@ _Noreturn void app_loop() {
         };
 
         side_t other_side = {
-                .name = "native side(talks with the Internet)",
                 .fd = remote_fd,
+                .name = "native side(talks with the Internet)",
                 .read = read,
                 .write = write,
                 .select = select,

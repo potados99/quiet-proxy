@@ -115,8 +115,8 @@ _Noreturn int app_loop() {
         log_message("Connected to remote: %s", remote_address);
 
         side_t this_side = {
-                .name = "native side(talks with browser)",
                 .fd = conn_fd,
+                .name = "native side(talks with browser)",
                 .read = read,
                 .write = write,
                 .select = select,
@@ -126,8 +126,8 @@ _Noreturn int app_loop() {
         };
 
         side_t other_side = {
-                .name = "lwip side(talks with lwip proxy server on other host)",
                 .fd = remote_fd,
+                .name = "lwip side(talks with lwip proxy server on other host)",
                 .read = (ssize_t (*)(int, void *, size_t)) lwip_read,
                 .write = (ssize_t (*)(int, const void *, size_t)) lwip_write,
                 .select = lwip_select,
